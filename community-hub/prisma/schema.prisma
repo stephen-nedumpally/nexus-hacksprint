@@ -1,0 +1,110 @@
+// This is your Prisma schema file
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  verified      Boolean   @default(false)
+  skillTests    SkillTest[]
+  startupApplications StartupApplication[]
+  studyGroups   StudyGroupMember[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?  @db.Text
+  access_token       String?  @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?  @db.Text
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SkillTest {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  skills    String[]
+  scores    Json
+  takenAt   DateTime @default(now())
+  nextTestAt DateTime
+}
+
+model Startup {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  roles       Json
+  requirements Json
+  createdBy   String
+  applications StartupApplication[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model StartupApplication {
+  id        String   @id @default(cuid())
+  userId    String
+  startupId String
+  status    String
+  user      User     @relation(fields: [userId], references: [id])
+  startup   Startup  @relation(fields: [startupId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model StudyGroup {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  type        String
+  level       String[]
+  roadmap     Json
+  schedule    Json
+  members     StudyGroupMember[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model StudyGroupMember {
+  id           String     @id @default(cuid())
+  userId       String
+  studyGroupId String
+  role         String
+  user         User       @relation(fields: [userId], references: [id])
+  studyGroup   StudyGroup @relation(fields: [studyGroupId], references: [id])
+  joinedAt     DateTime   @default(now())
+
+  @@unique([userId, studyGroupId])
+}
