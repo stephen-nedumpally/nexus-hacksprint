@@ -20,6 +20,8 @@ model User {
   skillTests    SkillTest[]
   startupApplications StartupApplication[]
   studyGroups   StudyGroupMember[]
+  applications  Application[]
+  startups      Startup[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -65,12 +67,42 @@ model Startup {
   id          String   @id @default(cuid())
   name        String
   description String
-  roles       Json
-  requirements Json
-  createdBy   String
-  applications StartupApplication[]
+  logo        String?
+  foundedYear Int
+  teamSize    Int     @default(1)
+  domain      String[]
+  website     String?
+  positions   Position[]
+  createdBy   User     @relation(fields: [userId], references: [id])
+  userId      String
+  likes       StartupReaction[]
+  comments    StartupComment[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model StartupReaction {
+  id        String   @id @default(cuid())
+  startup   Startup  @relation(fields: [startupId], references: [id])
+  startupId String
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  type      String   // 'like' or 'dislike'
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([startupId, userId])
+}
+
+model StartupComment {
+  id        String   @id @default(cuid())
+  startup   Startup  @relation(fields: [startupId], references: [id])
+  startupId String
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model StartupApplication {
@@ -107,4 +139,40 @@ model StudyGroupMember {
   joinedAt     DateTime   @default(now())
 
   @@unique([userId, studyGroupId])
+}
+
+model Position {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  startup     Startup  @relation(fields: [startupId], references: [id])
+  startupId   String
+  requirements Requirements?
+  applications Application[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Requirements {
+  id          String   @id @default(cuid())
+  position    Position @relation(fields: [positionId], references: [id])
+  positionId  String   @unique
+  skills      String[]
+  experience  Int      // in months
+  education   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Application {
+  id          String   @id @default(cuid())
+  position    Position @relation(fields: [positionId], references: [id])
+  positionId  String
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String
+  status      String   @default("pending") // pending, accepted, rejected
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([positionId, userId])
 }

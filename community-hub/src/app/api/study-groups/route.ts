@@ -3,6 +3,34 @@ import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import { authOptions } from '@/lib/auth';
 
+type StudyGroupWithCount = Awaited<ReturnType<typeof prisma.studyGroup.findFirst>> & {
+  _count: {
+    members: number;
+  };
+};
+
+interface StudyGroupResponse extends Omit<StudyGroupWithCount, '_count'> {
+  memberCount: number;
+}
+
+interface CreateStudyGroupData {
+  name: string;
+  description: string;
+  type: string;
+  level: string[];
+  roadmap: {
+    weeks: Array<{
+      topic: string;
+      duration: string;
+    }>;
+  };
+  schedule: {
+    meetingDay: string;
+    meetingTime: string;
+    duration: string;
+  };
+}
+
 export async function GET() {
   try {
     const groups = await prisma.studyGroup.findMany({
@@ -16,7 +44,7 @@ export async function GET() {
       },
     });
 
-    const groupsWithMemberCount = groups.map((group) => ({
+    const groupsWithMemberCount = groups.map((group: StudyGroupWithCount): StudyGroupResponse => ({
       ...group,
       memberCount: group._count.members,
       _count: undefined,
@@ -43,7 +71,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const data = await req.json();
+    const data: CreateStudyGroupData = await req.json();
     
     const group = await prisma.studyGroup.create({
       data: {

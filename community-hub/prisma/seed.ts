@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
@@ -30,52 +30,77 @@ const startups = [
   {
     name: 'EcoTrack',
     description: 'Building a sustainable future with IoT-powered environmental monitoring.',
-    roles: ['Frontend Developer', 'IoT Engineer', 'UI/UX Designer'],
-    requirements: {
-      experience: '2+ years',
-      skills: ['React', 'IoT Protocols', 'Data Visualization'],
-    },
-    createdBy: 'user1',
+    foundedYear: 2023,
+    teamSize: 5,
+    domain: ['IoT', 'Environmental Tech', 'Cloud Computing'],
+    website: 'https://ecotrack.example.com',
+    positions: [
+      {
+        title: 'Frontend Developer',
+        description: 'Build responsive and intuitive user interfaces for our IoT dashboard.',
+        requirements: {
+          skills: ['React', 'TypeScript', 'D3.js'],
+          experience: 24, // months
+          education: "Bachelor's in Computer Science or related field",
+        },
+      },
+      {
+        title: 'IoT Engineer',
+        description: 'Design and implement IoT sensor networks and data collection systems.',
+        requirements: {
+          skills: ['Arduino', 'MQTT', 'Python', 'AWS IoT'],
+          experience: 36,
+          education: "Master's in Electronics or Computer Engineering",
+        },
+      },
+    ],
   },
   {
     name: 'HealthHub',
     description: 'AI-powered personal health assistant and medical record management.',
-    roles: ['ML Engineer', 'Backend Developer', 'Mobile Developer'],
-    requirements: {
-      experience: '3+ years',
-      skills: ['Python', 'TensorFlow', 'React Native'],
-    },
-    createdBy: 'user2',
+    foundedYear: 2022,
+    teamSize: 8,
+    domain: ['HealthTech', 'AI/ML', 'Mobile Development'],
+    website: 'https://healthhub.example.com',
+    positions: [
+      {
+        title: 'ML Engineer',
+        description: 'Develop and optimize machine learning models for health predictions.',
+        requirements: {
+          skills: ['Python', 'TensorFlow', 'PyTorch', 'Healthcare ML'],
+          experience: 36,
+          education: "Master's in Machine Learning or related field",
+        },
+      },
+      {
+        title: 'Mobile Developer',
+        description: 'Create native mobile applications for iOS and Android platforms.',
+        requirements: {
+          skills: ['React Native', 'TypeScript', 'Mobile UI/UX'],
+          experience: 24,
+          education: "Bachelor's in Computer Science",
+        },
+      },
+    ],
   },
   {
     name: 'CodeMentor',
     description: 'Peer-to-peer programming mentorship platform.',
-    roles: ['Full Stack Developer', 'DevOps Engineer'],
-    requirements: {
-      experience: '1+ years',
-      skills: ['Node.js', 'React', 'AWS'],
-    },
-    createdBy: 'user3',
-  },
-  {
-    name: 'SmartFinance',
-    description: 'Blockchain-based decentralized finance solution.',
-    roles: ['Blockchain Developer', 'Smart Contract Engineer'],
-    requirements: {
-      experience: '2+ years',
-      skills: ['Solidity', 'Web3.js', 'DeFi'],
-    },
-    createdBy: 'user1',
-  },
-  {
-    name: 'ArtifyAI',
-    description: 'AI-powered digital art creation and NFT marketplace.',
-    roles: ['AI Engineer', 'Frontend Developer', 'Smart Contract Developer'],
-    requirements: {
-      experience: '2+ years',
-      skills: ['PyTorch', 'React', 'Ethereum'],
-    },
-    createdBy: 'user2',
+    foundedYear: 2024,
+    teamSize: 3,
+    domain: ['EdTech', 'Web Development'],
+    website: 'https://codementor.example.com',
+    positions: [
+      {
+        title: 'Full Stack Developer',
+        description: 'Build and maintain our mentorship platform using modern web technologies.',
+        requirements: {
+          skills: ['Node.js', 'React', 'PostgreSQL', 'AWS'],
+          experience: 12,
+          education: "Bachelor's in Computer Science or equivalent experience",
+        },
+      },
+    ],
   },
 ];
 
@@ -97,7 +122,12 @@ const studyGroups = [
       meetingTime: '18:00',
       duration: '2 hours',
     },
-    createdBy: 'user1',
+    members: {
+      create: {
+        userId: 'user1',
+        role: 'admin',
+      },
+    },
   },
   {
     name: 'Machine Learning Fundamentals',
@@ -116,7 +146,12 @@ const studyGroups = [
       meetingTime: '19:00',
       duration: '1.5 hours',
     },
-    createdBy: 'user2',
+    members: {
+      create: {
+        userId: 'user2',
+        role: 'admin',
+      },
+    },
   },
   {
     name: 'Competitive Programming',
@@ -135,7 +170,12 @@ const studyGroups = [
       meetingTime: '10:00',
       duration: '3 hours',
     },
-    createdBy: 'user3',
+    members: {
+      create: {
+        userId: 'user3',
+        role: 'admin',
+      },
+    },
   },
   {
     name: 'Web3 Development',
@@ -154,7 +194,12 @@ const studyGroups = [
       meetingTime: '20:00',
       duration: '2 hours',
     },
-    createdBy: 'user1',
+    members: {
+      create: {
+        userId: 'user1',
+        role: 'admin',
+      },
+    },
   },
   {
     name: 'Mobile App Design',
@@ -173,73 +218,77 @@ const studyGroups = [
       meetingTime: '17:00',
       duration: '1.5 hours',
     },
-    createdBy: 'user2',
+    members: {
+      create: {
+        userId: 'user2',
+        role: 'admin',
+      },
+    },
   },
 ];
 
 async function main() {
-  // Clear existing data
+  // Delete existing data
+  await prisma.application.deleteMany();
+  await prisma.requirements.deleteMany();
+  await prisma.position.deleteMany();
+  await prisma.startup.deleteMany();
   await prisma.studyGroupMember.deleteMany();
   await prisma.studyGroup.deleteMany();
-  await prisma.startup.deleteMany();
   await prisma.user.deleteMany();
 
   // Create users
-  for (const user of users) {
-    await prisma.user.create({
-      data: user,
-    });
-  }
+  const createdUsers = await Promise.all(
+    users.map((user) =>
+      prisma.user.create({
+        data: user,
+      })
+    )
+  );
 
-  // Create startups
+  // Create startups with positions and requirements
   for (const startup of startups) {
     await prisma.startup.create({
-      data: startup,
-    });
-  }
-
-  // Create study groups and add creators as members
-  for (const group of studyGroups) {
-    const { createdBy, ...groupData } = group;
-    await prisma.studyGroup.create({
       data: {
-        ...groupData,
-        members: {
-          create: {
-            userId: createdBy,
-            role: 'admin',
-          },
+        name: startup.name,
+        description: startup.description,
+        foundedYear: startup.foundedYear,
+        teamSize: startup.teamSize,
+        domain: startup.domain,
+        website: startup.website,
+        positions: {
+          create: startup.positions.map((position) => ({
+            title: position.title,
+            description: position.description,
+            requirements: {
+              create: {
+                skills: position.requirements.skills,
+                experience: position.requirements.experience,
+                education: position.requirements.education,
+              },
+            },
+          })),
         },
       },
     });
   }
 
-  // Add some random members to study groups
-  const allGroups = await prisma.studyGroup.findMany();
-  for (const group of allGroups) {
-    // Get all members of this group
-    const existingMembers = await prisma.studyGroupMember.findMany({
-      where: { studyGroupId: group.id },
-      select: { userId: true },
+  // Create study groups
+  for (const group of studyGroups) {
+    await prisma.studyGroup.create({
+      data: {
+        name: group.name,
+        description: group.description,
+        type: group.type,
+        level: group.level,
+        roadmap: group.roadmap,
+        schedule: group.schedule,
+        members: group.members,
+      },
     });
-    const existingMemberIds = existingMembers.map(m => m.userId);
-
-    // Filter out users who are already members
-    const availableUsers = users.filter(user => !existingMemberIds.includes(user.id));
-    const randomUsers = availableUsers.slice(0, Math.floor(Math.random() * 2) + 1);
-
-    for (const user of randomUsers) {
-      await prisma.studyGroupMember.create({
-        data: {
-          userId: user.id,
-          studyGroupId: group.id,
-          role: 'member',
-        },
-      });
-    }
   }
 
-  console.log('Database has been seeded!');
+  console.log('Seed data created successfully');
 }
 
 main()
