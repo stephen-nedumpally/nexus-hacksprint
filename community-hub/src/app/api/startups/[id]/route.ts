@@ -5,8 +5,8 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const id = await params.id;
-  
+  const { id } = params;
+
   try {
     const startup = await prisma.startup.findUnique({
       where: { id },
@@ -16,40 +16,19 @@ export async function GET(
             requirements: true,
           },
         },
-        likes: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true
-              }
-            }
-          }
-        },
-        dislikes: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true
-              }
-            }
-          }
-        },
+        user: true,
+        likes: true,
+        dislikes: true,
         comments: {
           include: {
-            user: {
-              select: {
-                id: true,
-                name: true
-              }
-            }
+            user: true,
           },
           orderBy: {
             createdAt: 'desc'
           }
-        }
-      }
+        },
+        applications: true,
+      },
     });
 
     if (!startup) {

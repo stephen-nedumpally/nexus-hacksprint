@@ -9,9 +9,13 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Menu, X } from 'lucide-react';
 import { useState } from 'react';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { User, LogOut } from 'lucide-react';
 
 export function Navbar() {
   const { data: session } = useSession();
@@ -53,36 +57,38 @@ export function Navbar() {
         {/* Desktop auth buttons */}
         <div className="hidden md:flex items-center gap-4">
           {session ? (
-            <>
-              <Button
-                variant="destructive"
-                onClick={() => signOut()}
-                className="bg-red-950 text-red-50 hover:bg-red-900"
-              >
-                Sign Out
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger className="overflow-hidden rounded-full border-2 border-white/10">
-                  {session.user?.image ? (
-                    <Image
-                      src={session.user.image}
-                      alt={session.user.name || 'User'}
-                      width={36}
-                      height={36}
-                      className="h-9 w-9 transition hover:opacity-90"
-                    />
-                  ) : (
-                    <div className="h-9 w-9 bg-lime-400" />
-                  )}
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem className="flex flex-col items-start">
-                    <span className="font-medium">{session.user?.name}</span>
-                    <span className="text-sm text-zinc-500">{session.user?.email}</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={session.user?.image || ''} alt={session.user?.name || ''} />
+                    <AvatarFallback>{session.user?.name?.[0] || session.user?.email?.[0]}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{session.user?.name}</p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {session.user?.email}
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/profile">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => signOut()}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
             <>
               <Button

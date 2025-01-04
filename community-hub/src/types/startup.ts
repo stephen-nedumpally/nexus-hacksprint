@@ -18,27 +18,59 @@ export interface Position {
   updatedAt: Date;
 }
 
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  emailVerified: Date | null;
+  image?: string;
+}
+
+export interface Like {
+  id: string;
+  startupId: string;
+  userId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Dislike {
+  id: string;
+  startupId: string;
+  userId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Comment {
+  id: string;
+  content: string;
+  startupId: string;
+  userId: string;
+  user: User;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface Startup {
   id: string;
   name: string;
   description: string;
   logo?: string;
-  foundedYear: number;
-  teamSize: number;
   domain: string[];
   website?: string;
-  problemStatement: string;
+  problem: string;
   solution: string;
-  techStack: string[];
-  tam: number;        // Total Addressable Market in millions
-  sam: number;        // Serviceable Addressable Market in millions
-  competitors: number;
-  mrr?: number;       // Monthly Recurring Revenue
-  stage: string;      // e.g., "Idea", "MVP", "Growth", "Scale"
-  fundingRound?: string; // e.g., "Pre-seed", "Seed", "Series A"
-  fundingRaised?: number; // Total funding raised in millions
-  traction?: string;  // Key metrics and growth numbers
+  market: string;
+  traction: string;
+  funding: string;
+  teamSize: number;
+  founded: Date;
   positions: Position[];
+  likes: Like[];
+  dislikes: Dislike[];
+  comments: Comment[];
+  user: User;
   createdAt: Date;
   updatedAt: Date;
 }

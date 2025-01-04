@@ -7,12 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ThumbsUp, ThumbsDown, MessageSquare } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
-import { formatNumber } from '@/lib/utils';
+import { formatNumber, formatDate } from '@/lib/utils';
 import { Startup } from '@/types/startup';
 import { ViewOpportunitiesDialog } from '@/components/startups/view-opportunities-dialog';
-import { Textarea } from '@/components/ui/textarea';
 
 export default function StartupDetailsPage({ params }: { params: { id: string } }) {
   const { data: session, status } = useSession();
@@ -20,11 +19,11 @@ export default function StartupDetailsPage({ params }: { params: { id: string } 
   const [startup, setStartup] = useState<Startup | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPosition, setSelectedPosition] = useState<string | null>(null);
-  const [comment, setComment] = useState('');
-  const [submittingComment, setSubmittingComment] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/startups/${params.id}`)
+    const startupId = React.use(params).id;
+    setLoading(true);
+    fetch(`/api/startups/${startupId}`)
       .then((res) => res.json())
       .then((data) => {
         setStartup(data);
@@ -34,7 +33,7 @@ export default function StartupDetailsPage({ params }: { params: { id: string } 
         console.error('Error fetching startup:', error);
         setLoading(false);
       });
-  }, [params.id]);
+  }, [params]);
 
   const handleApply = (positionId: string) => {
     if (status === 'unauthenticated') {
@@ -42,77 +41,6 @@ export default function StartupDetailsPage({ params }: { params: { id: string } 
       return;
     }
     setSelectedPosition(positionId);
-  };
-
-  const handleLike = async () => {
-    if (status === 'unauthenticated') {
-      router.push(`/auth/signin?callbackUrl=/startups/${params.id}`);
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/startups/${params.id}/like`, {
-        method: 'POST',
-      });
-
-      if (!response.ok) throw new Error('Failed to like');
-
-      const updatedStartup = await response.json();
-      setStartup(updatedStartup);
-    } catch (error) {
-      console.error('Error liking startup:', error);
-    }
-  };
-
-  const handleDislike = async () => {
-    if (status === 'unauthenticated') {
-      router.push(`/auth/signin?callbackUrl=/startups/${params.id}`);
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/startups/${params.id}/dislike`, {
-        method: 'POST',
-      });
-
-      if (!response.ok) throw new Error('Failed to dislike');
-
-      const updatedStartup = await response.json();
-      setStartup(updatedStartup);
-    } catch (error) {
-      console.error('Error disliking startup:', error);
-    }
-  };
-
-  const handleComment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!comment.trim()) return;
-
-    if (status === 'unauthenticated') {
-      router.push(`/auth/signin?callbackUrl=/startups/${params.id}`);
-      return;
-    }
-
-    setSubmittingComment(true);
-    try {
-      const response = await fetch(`/api/startups/${params.id}/comment`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ content: comment }),
-      });
-
-      if (!response.ok) throw new Error('Failed to comment');
-
-      const updatedStartup = await response.json();
-      setStartup(updatedStartup);
-      setComment('');
-    } catch (error) {
-      console.error('Error commenting:', error);
-    } finally {
-      setSubmittingComment(false);
-    }
   };
 
   if (loading) {
@@ -157,225 +85,186 @@ export default function StartupDetailsPage({ params }: { params: { id: string } 
     );
   }
 
-  const hasLiked = startup.likes?.some(like => like.userId === session?.user?.id);
-  const hasDisliked = startup.dislikes?.some(dislike => dislike.userId === session?.user?.id);
-
   return (
-    <div className="container mx-auto py-8 space-y-8">
-      <div className="flex items-center gap-4">
-        <Link href="/startups" className="text-muted-foreground hover:text-foreground">
-          <ChevronLeft className="w-6 h-6" />
+    <div className="container mx-auto py-8">
+      <div className="mb-6">
+        <Link href="/startups">
+          <Button variant="outline">
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            Back to Startups
+          </Button>
         </Link>
-        <h1 className="text-3xl font-bold">{startup.name}</h1>
       </div>
 
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col gap-6">
-            {/* Basic Info */}
+        <CardHeader>
+          <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold mb-4">About</h2>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <h3 className="font-medium">Domains</h3>
-                  <div className="flex gap-2 mt-2">
-                    {startup.domain.map((domain) => (
-                      <Badge key={domain} variant="outline">
-                        {domain}
-                      </Badge>
-                    ))}
-                  </div>
+              <CardTitle className="text-3xl">{startup.name}</CardTitle>
+              <CardDescription className="mt-2">{startup.description}</CardDescription>
+            </div>
+            {startup.logo && (
+              <img
+                src={startup.logo}
+                alt={`${startup.name} logo`}
+                className="w-24 h-24 object-contain"
+              />
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-8">
+          {/* Quick Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">Founded</p>
+              <p className="text-2xl font-semibold">{formatDate(startup?.founded)}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">Team Size</p>
+              <p className="text-2xl font-semibold">{startup.teamSize} members</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">Stage</p>
+              <p className="text-2xl font-semibold">{startup.stage}</p>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Problem & Solution */}
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Problem Statement</h3>
+              <p className="text-muted-foreground">{startup.problemStatement}</p>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Our Solution</h3>
+              <p className="text-muted-foreground">{startup.solution}</p>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Market & Traction */}
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold">Market & Traction</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">TAM</p>
+                <p className="text-2xl font-semibold">${formatNumber(startup.tam)}M</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">SAM</p>
+                <p className="text-2xl font-semibold">${formatNumber(startup.sam)}M</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Competitors</p>
+                <p className="text-2xl font-semibold">{startup.competitors}</p>
+              </div>
+              {startup.mrr && (
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">MRR</p>
+                  <p className="text-2xl font-semibold">${formatNumber(startup.mrr)}</p>
                 </div>
-                {startup.website && (
-                  <div>
-                    <h3 className="font-medium">Website</h3>
-                    <a
-                      href={startup.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-lime-400 hover:underline mt-2 block"
-                    >
-                      {startup.website}
-                    </a>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
-
-            <Separator />
-
-            {/* Problem & Solution */}
-            <div className="grid gap-6 md:grid-cols-2">
+            {startup.traction && (
               <div>
-                <h3 className="font-medium mb-2">Problem</h3>
-                <p className="text-muted-foreground">{startup.problem}</p>
-              </div>
-              <div>
-                <h3 className="font-medium mb-2">Solution</h3>
-                <p className="text-muted-foreground">{startup.solution}</p>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Market & Traction */}
-            <div className="grid gap-6 md:grid-cols-2">
-              <div>
-                <h3 className="font-medium mb-2">Market Size</h3>
-                <p className="text-muted-foreground">
-                  ${formatNumber(startup.marketSize)}
-                </p>
-              </div>
-              <div>
-                <h3 className="font-medium mb-2">Current Traction</h3>
+                <h4 className="text-sm font-medium mb-2">Key Metrics & Traction</h4>
                 <p className="text-muted-foreground">{startup.traction}</p>
               </div>
+            )}
+          </div>
+
+          <Separator />
+
+          {/* Funding */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Funding</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {startup.fundingRound && (
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Current Round</p>
+                  <p className="text-2xl font-semibold">{startup.fundingRound}</p>
+                </div>
+              )}
+              {startup.fundingRaised && (
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Total Raised</p>
+                  <p className="text-2xl font-semibold">${startup.fundingRaised}M</p>
+                </div>
+              )}
             </div>
+          </div>
 
-            <Separator />
+          <Separator />
 
-            {/* Funding */}
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Funding</h2>
-              <div className="grid gap-4 md:grid-cols-3">
-                <div>
-                  <h3 className="font-medium">Stage</h3>
-                  <p className="text-muted-foreground mt-2">{startup.fundingStage}</p>
-                </div>
-                <div>
-                  <h3 className="font-medium">Amount Raised</h3>
-                  <p className="text-muted-foreground mt-2">
-                    ${formatNumber(startup.amountRaised)}
-                  </p>
-                </div>
-                <div>
-                  <h3 className="font-medium">Seeking</h3>
-                  <p className="text-muted-foreground mt-2">
-                    ${formatNumber(startup.seekingAmount)}
-                  </p>
-                </div>
-              </div>
+          {/* Tech Stack */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Tech Stack</h3>
+            <div className="flex flex-wrap gap-2">
+              {startup.techStack.map((tech) => (
+                <Badge key={tech} variant="secondary">
+                  {tech}
+                </Badge>
+              ))}
             </div>
+          </div>
 
-            <Separator />
+          <Separator />
 
-            {/* Community Engagement */}
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Community Engagement</h2>
-              <div className="flex gap-4 mb-6">
-                <Button
-                  variant={hasLiked ? "default" : "outline"}
-                  onClick={handleLike}
-                  className="flex gap-2"
-                >
-                  <ThumbsUp className="w-4 h-4" />
-                  <span>{startup.likes?.length || 0}</span>
-                </Button>
-                <Button
-                  variant={hasDisliked ? "default" : "outline"}
-                  onClick={handleDislike}
-                  className="flex gap-2"
-                >
-                  <ThumbsDown className="w-4 h-4" />
-                  <span>{startup.dislikes?.length || 0}</span>
-                </Button>
-                <Button variant="outline" className="flex gap-2">
-                  <MessageSquare className="w-4 h-4" />
-                  <span>{startup.comments?.length || 0}</span>
-                </Button>
-              </div>
-
-              {/* Comments Section */}
-              <div className="space-y-4">
-                <form onSubmit={handleComment} className="space-y-2">
-                  <Textarea
-                    placeholder="Leave a comment..."
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    disabled={status === 'unauthenticated'}
-                  />
-                  <Button
-                    type="submit"
-                    disabled={submittingComment || status === 'unauthenticated'}
-                    className="bg-lime-400 text-black hover:bg-lime-400/90"
-                  >
-                    {status === 'unauthenticated' ? 'Sign in to Comment' : 'Post Comment'}
-                  </Button>
-                </form>
-
-                <div className="space-y-4">
-                  {startup.comments?.map((comment) => (
-                    <div key={comment.id} className="border-b pb-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="font-medium">{comment.user.name}</div>
-                          <div className="text-muted-foreground">{comment.content}</div>
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {new Date(comment.createdAt).toLocaleDateString()}
-                        </div>
+          {/* Open Positions */}
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold">Open Positions</h3>
+            <div className="grid gap-6 md:grid-cols-2">
+              {startup.positions.map((position) => (
+                <Card key={position.id}>
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle className="text-xl">{position.title}</CardTitle>
+                        <CardDescription>{position.description}</CardDescription>
                       </div>
+                      <Button 
+                        className="bg-lime-400 text-black hover:bg-lime-400/90"
+                        onClick={() => handleApply(position.id)}
+                      >
+                        Apply Now
+                      </Button>
                     </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Open Positions */}
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold">Open Positions</h3>
-              <div className="grid gap-6 md:grid-cols-2">
-                {startup.positions.map((position) => (
-                  <Card key={position.id}>
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <CardTitle className="text-xl">{position.title}</CardTitle>
-                          <CardDescription>{position.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">Required Skills</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {position.requirements.skills.map((skill) => (
+                            <Badge key={skill} variant="outline">
+                              {skill}
+                            </Badge>
+                          ))}
                         </div>
-                        <Button 
-                          className="bg-lime-400 text-black hover:bg-lime-400/90"
-                          onClick={() => handleApply(position.id)}
-                        >
-                          Apply Now
-                        </Button>
                       </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <div>
-                          <h4 className="text-sm font-medium mb-2">Required Skills</h4>
-                          <div className="flex flex-wrap gap-2">
-                            {position.requirements.skills.map((skill) => (
-                              <Badge key={skill} variant="outline">
-                                {skill}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-medium mb-2">Experience</h4>
-                          <p>{position.requirements.experience} years</p>
-                        </div>
-                        {position.requirements.education && (
-                          <div>
-                            <h4 className="text-sm font-medium mb-2">Education</h4>
-                            <p>{position.requirements.education}</p>
-                          </div>
-                        )}
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">Experience</h4>
+                        <p>{position.requirements.experience} years</p>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                      {position.requirements.education && (
+                        <div>
+                          <h4 className="text-sm font-medium mb-2">Education</h4>
+                          <p>{position.requirements.education}</p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {selectedPosition && (
+      {selectedPosition && startup && (
         <ViewOpportunitiesDialog
           startup={startup}
           open={!!selectedPosition}

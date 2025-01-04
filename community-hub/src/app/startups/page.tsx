@@ -1,55 +1,28 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Plus, ThumbsUp, ThumbsDown, MessageSquare } from 'lucide-react';
 import Image from "next/image";
 import Link from "next/link";
 import { useQuery } from '@tanstack/react-query';
 import { fetchStartups } from '@/lib/api/startups';
 import { CreateStartupForm } from '@/components/startups/create-startup-form';
 import { ViewOpportunitiesDialog } from '@/components/startups/view-opportunities-dialog';
+import { formatDate } from '@/lib/utils';
 import type { Startup } from '@/types/startup';
-import { useSession } from 'next-auth/react';
 
 export default function StartupsPage() {
-  const { data: session, status } = useSession();
   const [selectedStartup, setSelectedStartup] = useState<Startup | null>(null);
-  const [hasStartup, setHasStartup] = useState(false);
-  const [startups, setStartups] = useState<Startup[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: startups, isLoading } = useQuery<Startup[]>({
+    queryKey: ['startups'],
+    queryFn: fetchStartups,
+  });
 
-  useEffect(() => {
-    const fetchStartupsData = async () => {
-      try {
-        const data = await fetchStartups();
-        setStartups(data);
-      } catch (error) {
-        console.error('Error fetching startups:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const checkStartupExistence = async () => {
-      if (status === 'authenticated') {
-        try {
-          const response = await fetch('/api/startups/my/exists');
-          const data = await response.json();
-          setHasStartup(data);
-        } catch (error) {
-          console.error('Error checking startup existence:', error);
-        }
-      }
-    };
-
-    fetchStartupsData();
-    checkStartupExistence();
-  }, [status]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-lime-400"></div>
@@ -68,20 +41,12 @@ export default function StartupsPage() {
             </p>
           </div>
           
-          {hasStartup ? (
-            <Link href="/startups/my">
-              <Button className="bg-lime-400 text-black hover:bg-lime-400/90">
-                View My Startup
-              </Button>
-            </Link>
-          ) : (
-            <Link href="/startups/create">
-              <Button className="bg-lime-400 text-black hover:bg-lime-400/90">
-                <Plus className="mr-2 h-4 w-4" />
-                Create Startup
-              </Button>
-            </Link>
-          )}
+          <Link href="/startups/create">
+            <Button className="bg-lime-400 text-black hover:bg-lime-400/90">
+              <Plus className="mr-2 h-4 w-4" />
+              Create Startup
+            </Button>
+          </Link>
         </div>
 
         <div className="grid md:grid-cols-3 gap-8">
@@ -132,7 +97,23 @@ export default function StartupsPage() {
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-400">Founded</span>
-                    <span className="text-white font-medium">{startup.foundedYear}</span>
+                    <span className="text-white font-medium">{formatDate(startup.founded)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1">
+                        <ThumbsUp className="h-4 w-4 text-gray-400" />
+                        <span className="text-white font-medium">{startup.likes?.length}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <ThumbsDown className="h-4 w-4 text-gray-400" />
+                        <span className="text-white font-medium">{startup.dislikes?.length}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <MessageSquare className="h-4 w-4 text-gray-400" />
+                        <span className="text-white font-medium">{startup.comments?.length}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div className="flex gap-3 mt-6">

@@ -1,46 +1,28 @@
-// This is your Prisma schema file
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client-js"
 }
 
-model User {
-  id             String    @id @default(cuid())
-  name           String?
-  email          String?   @unique
-  emailVerified  DateTime?
-  image          String?
-  role           String    @default("student")
-  skills         String[]
-  interests      String[]
-  accounts      Account[]
-  sessions      Session[]
-  verified      Boolean   @default(false)
-  skillTests    SkillTest[]
-  startupApplications StartupApplication[]
-  studyGroups   StudyGroupMember[]
-  applications  Application[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Account {
-  id                 String  @id @default(cuid())
-  userId             String
-  type               String
-  provider           String
-  providerAccountId  String
-  refresh_token      String?  @db.Text
-  access_token       String?  @db.Text
-  expires_at         Int?
-  token_type         String?
-  scope              String?
-  id_token           String?  @db.Text
-  session_state      String?
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -55,110 +37,136 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model SkillTest {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  skills    String[]
-  scores    Json
-  takenAt   DateTime @default(now())
-  nextTestAt DateTime
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  startups      Startup[]
+  likes         Like[]
+  dislikes      Dislike[]
+  comments      Comment[]
+  applications  Application[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }
 
 model Startup {
   id          String   @id @default(cuid())
   name        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   description String
-  logo        String?
-  foundedYear Int
-  teamSize    Int
   domain      String[]
   website     String?
-  problemStatement String
+  problem     String
   solution    String
-  techStack   String[]
-  tam         Float    // Total Addressable Market in millions
-  sam         Float    // Serviceable Addressable Market in millions
-  competitors Int
-  mrr         Float?   // Monthly Recurring Revenue
-  stage       String   // e.g., "Idea", "MVP", "Growth", "Scale"
-  fundingRound String? // e.g., "Pre-seed", "Seed", "Series A"
-  fundingRaised Float? // Total funding raised in millions
-  traction    String?  // Key metrics and growth numbers
-  positions   Position[]
-  applications StartupApplication[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
+  market      String
+  traction    String
+  funding     String
+  teamSize    Int      @default(1)
+  founded     DateTime @default(now())
+  userId      String
 
-model StartupApplication {
-  id        String   @id @default(cuid())
-  userId    String
-  startupId String
-  status    String
-  user      User     @relation(fields: [userId], references: [id])
-  startup   Startup  @relation(fields: [startupId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
+  // Relations
+  user         User          @relation(fields: [userId], references: [id])
+  positions    Position[]
+  likes        Like[]
+  dislikes     Dislike[]
+  comments     Comment[]
+  applications Application[]
 
-model StudyGroup {
-  id          String   @id @default(cuid())
-  name        String
-  description String
-  type        String
-  level       String[]
-  roadmap     Json
-  schedule    Json
-  members     StudyGroupMember[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model StudyGroupMember {
-  id           String     @id @default(cuid())
-  userId       String
-  studyGroupId String
-  role         String
-  user         User       @relation(fields: [userId], references: [id])
-  studyGroup   StudyGroup @relation(fields: [studyGroupId], references: [id])
-  joinedAt     DateTime   @default(now())
-
-  @@unique([userId, studyGroupId])
+  @@index([userId])
 }
 
 model Position {
-  id          String   @id @default(cuid())
-  title       String
-  description String
-  startup     Startup  @relation(fields: [startupId], references: [id])
-  startupId   String
+  id           String        @id @default(cuid())
+  title        String
+  description  String
+  startupId    String
+  startup      Startup       @relation(fields: [startupId], references: [id])
   requirements Requirements?
   applications Application[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([startupId])
 }
 
 model Requirements {
   id          String   @id @default(cuid())
-  position    Position @relation(fields: [positionId], references: [id])
-  positionId  String   @unique
   skills      String[]
-  experience  Int      // in months
+  experience  Int
   education   String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  positionId  String   @unique
+  position    Position @relation(fields: [positionId], references: [id])
 }
 
 model Application {
-  id          String   @id @default(cuid())
-  position    Position @relation(fields: [positionId], references: [id])
-  positionId  String
-  user        User     @relation(fields: [userId], references: [id])
-  userId      String
-  status      String   @default("pending") // pending, accepted, rejected
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  startupId  String
+  positionId String
+  userId     String
+  status     String   @default("PENDING") // PENDING, ACCEPTED, REJECTED
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  startup    Startup  @relation(fields: [startupId], references: [id])
+  position   Position @relation(fields: [positionId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
 
   @@unique([positionId, userId])
+  @@index([startupId])
+  @@index([userId])
+  @@index([positionId])
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  startupId String
+  userId    String
+  createdAt DateTime @default(now())
+  startup   Startup  @relation(fields: [startupId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([startupId, userId])
+  @@index([startupId])
+  @@index([userId])
+}
+
+model Dislike {
+  id        String   @id @default(cuid())
+  startupId String
+  userId    String
+  createdAt DateTime @default(now())
+  startup   Startup  @relation(fields: [startupId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([startupId, userId])
+  @@index([startupId])
+  @@index([userId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  startupId String
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  startup   Startup  @relation(fields: [startupId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([startupId])
+  @@index([userId])
 }
