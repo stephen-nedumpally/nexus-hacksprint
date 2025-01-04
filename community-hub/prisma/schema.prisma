@@ -41,7 +41,7 @@ model User {
   id            String    @id @default(cuid())
   name          String?
   email         String?   @unique
-  emailVerified DateTime?
+  verified      Boolean   @default(false)
   image         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -54,6 +54,7 @@ model User {
   dislikes      Dislike[]
   comments      Comment[]
   applications  Application[]
+  profile       Profile?
 }
 
 model VerificationToken {
@@ -180,4 +181,36 @@ model Comment {
 
   @@index([startupId])
   @@index([userId])
+}
+
+model Profile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id])
+  source            String   // How they found the platform
+  education         String
+  status            String   // student/employed/founder
+  advancedSkills    String[] // Max 5
+  intermediateSkills String[] // Max 5
+  beginnerSkills    String[] // Max 5
+  linkedinUrl       String?
+  githubUrl         String?
+  portfolioUrl      String?
+  projects          Project[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  url         String
+  profileId   String
+  profile     Profile  @relation(fields: [profileId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([profileId])
 }

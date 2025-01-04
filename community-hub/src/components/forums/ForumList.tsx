@@ -1,73 +1,49 @@
 'use client';
 
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import Link from 'next/link';
+import { Badge } from '@/components/ui/badge';
 
 const forums = [
   {
-    id: 'discord-general',
+    id: 'general',
     name: 'General Discussion',
-    platform: 'Discord',
-    description: 'General discussion about programming and technology',
-    activeMembers: 150,
-    totalMembers: 500,
-    link: 'https://discord.gg/example',
+    description: 'General discussion about technology, programming, and more',
+    count: 150,
   },
   {
-    id: 'discord-help',
+    id: 'introductions',
+    name: 'Introductions',
+    description: 'Introduce yourself to the community',
+    count: 75,
+  },
+  {
+    id: 'help',
     name: 'Help & Support',
-    platform: 'Discord',
-    description: 'Get help with coding problems and technical issues',
-    activeMembers: 75,
-    totalMembers: 300,
-    link: 'https://discord.gg/example-help',
-  },
-  {
-    id: 'googlechat-projects',
-    name: 'Project Collaboration',
-    platform: 'Google Chat',
-    description: 'Find partners and collaborate on projects',
-    activeMembers: 45,
-    totalMembers: 200,
-    link: 'https://chat.google.com/example',
+    description: 'Get help with technical issues and questions',
+    count: 120,
   },
 ];
 
-export function ForumList() {
+export function GeneralForums() {
   return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+    <div className="space-y-4">
       {forums.map((forum) => (
-        <Card key={forum.id}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              {forum.name}
-              <span className="text-sm font-normal text-muted-foreground">
-                ({forum.platform})
-              </span>
-            </CardTitle>
-            <CardDescription>{forum.description}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex justify-between text-sm">
-              <div>
-                <p className="font-medium">Active Members</p>
-                <p className="text-muted-foreground">{forum.activeMembers}</p>
-              </div>
-              <div>
-                <p className="font-medium">Total Members</p>
-                <p className="text-muted-foreground">{forum.totalMembers}</p>
-              </div>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button
-              className="w-full"
-              onClick={() => window.open(forum.link, '_blank')}
-            >
-              Join Channel
-            </Button>
-          </CardFooter>
-        </Card>
+        <Link key={forum.id} href={`/forums/${forum.id}`}>
+          <Card className="hover:border-primary transition-colors">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-lg font-medium">
+                {forum.name}
+              </CardTitle>
+              <Badge variant="secondary">{forum.count} topics</Badge>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                {forum.description}
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
       ))}
     </div>
   );

@@ -18,7 +18,6 @@ export async function GET() {
       include: {
         positions: {
           include: {
-            requirements: true,
             applications: {
               include: {
                 user: {
@@ -35,17 +34,21 @@ export async function GET() {
         },
         likes: true,
         dislikes: true,
-        comments: true,
+        comments: {
+          include: {
+            user: true
+          }
+        },
+        user: true,
       },
     });
 
-    if (!startup) {
-      return NextResponse.json(null);
-    }
-
-    return NextResponse.json(startup);
+    // Return an empty object if no startup found
+    return NextResponse.json(startup || { notFound: true });
   } catch (error) {
-    console.error('Error fetching startup:', error);
+    if (error instanceof Error) {
+      console.error('Error fetching startup:', error.message);
+    }
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 }

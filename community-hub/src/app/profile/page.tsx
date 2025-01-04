@@ -10,6 +10,12 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Startup } from '@/types/startup';
 import { useToast } from "@/components/ui/use-toast";
+import { ViewApplicationsDialog } from "@/components/startups/view-applications-dialog";
+import { useState } from 'react';
+import { Check } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { VerificationBadge } from "@/components/verify/verification-badge";
+import { ProfileEditor } from "@/components/profile/profile-editor";
 
 interface Application {
   id: string;
@@ -47,8 +53,14 @@ async function fetchMyApplications() {
 export default function ProfilePage() {
   const { data: session } = useSession();
   const { toast } = useToast();
+  const router = useRouter();
+  const [selectedPosition, setSelectedPosition] = useState<{
+    id: string;
+    title: string;
+    applications: any[];
+  } | null>(null);
 
-  const { data: myStartup, isError: startupError } = useQuery<Startup>({
+  const { data: myStartup, isError: startupError } = useQuery<Startup | { notFound: true }>({
     queryKey: ['my-startup'],
     queryFn: fetchMyStartup,
   });
@@ -56,6 +68,15 @@ export default function ProfilePage() {
   const { data: applications, isError: applicationsError } = useQuery<Application[]>({
     queryKey: ['my-applications'],
     queryFn: fetchMyApplications,
+  });
+
+  const { data: profile, refetch: refetchProfile } = useQuery({
+    queryKey: ['profile'],
+    queryFn: async () => {
+      const response = await fetch('/api/profile');
+      if (!response.ok) throw new Error('Failed to fetch profile');
+      return response.json();
+    },
   });
 
   if (!session) {
@@ -72,11 +93,33 @@ export default function ProfilePage() {
     <main className="min-h-screen bg-black py-24">
       <div className="container mx-auto px-4">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">My Profile</h1>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-bold mb-2">My Profile</h1>
+              {session.user?.verified ? (
+                <VerificationBadge size="lg" />
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="ml-2"
+                  onClick={() => router.push('/verify')}
+                >
+                  Complete Verification
+                </Button>
+              )}
+            </div>
+          </div>
           <p className="text-gray-400">
             Welcome back, {session.user?.name || session.user?.email}
           </p>
         </div>
+
+        {session.user?.verified && profile && (
+          <div className="mb-8">
+            <ProfileEditor profile={profile} onUpdate={refetchProfile} />
+          </div>
+        )}
 
         <Tabs defaultValue="applications" className="space-y-6">
           <TabsList>
@@ -177,9 +220,17 @@ export default function ProfilePage() {
                           </div>
                           <div className="flex items-center gap-2">
                             <Badge variant="secondary">
-                              {position.applications?.length || 0} Applications
+                              {position.applications?.length || 0} Applicants
                             </Badge>
-                            <Button variant="outline" size="sm">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => setSelectedPosition({
+                                id: position.id,
+                                title: position.title,
+                                applications: position.applications || []
+                              })}
+                            >
                               View Applications
                             </Button>
                           </div>
@@ -196,6 +247,15 @@ export default function ProfilePage() {
                       </Button>
                     </Link>
                   </div>
+
+                  {selectedPosition && (
+                    <ViewApplicationsDialog
+                      open={!!selectedPosition}
+                      onOpenChange={(open) => !open && setSelectedPosition(null)}
+                      applications={selectedPosition.applications}
+                      positionTitle={selectedPosition.title}
+                    />
+                  )}
                 </CardContent>
               </Card>
             ) : (

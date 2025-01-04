@@ -26,7 +26,7 @@ export function ViewOpportunitiesDialog({
   selectedPositionId,
   onApplicationSuccess
 }: ViewOpportunitiesDialogProps) {
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const router = useRouter();
   const { toast } = useToast();
   const [selectedTab, setSelectedTab] = useState("0");
@@ -56,9 +56,22 @@ export function ViewOpportunitiesDialog({
   };
 
   const handleApply = async (position: any) => {
-    if (status === 'unauthenticated') {
-      onOpenChange(false);
-      router.push(`/auth/signin?callbackUrl=/startups/${startup?.id}`);
+    if (!session?.user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to apply.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!session.user.verified) {
+      toast({
+        title: "Verification Required",
+        description: "Please complete verification to apply for positions.",
+        variant: "destructive",
+      });
+      router.push("/verify");
       return;
     }
 

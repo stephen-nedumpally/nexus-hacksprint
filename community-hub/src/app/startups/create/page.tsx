@@ -5,8 +5,9 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import CreateStartupForm from '@/components/startups/create-startup-form';
+import { RequireVerification } from "@/components/auth/require-verification";
 
-export default function CreateStartupPage() {
+function CreateStartupPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
@@ -42,3 +43,5 @@ export default function CreateStartupPage() {
     </main>
   );
 }
+
+export default RequireVerification(CreateStartupPage);

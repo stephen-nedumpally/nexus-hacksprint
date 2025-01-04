@@ -38,7 +38,7 @@ export async function POST(
 
     const data = await request.json();
 
-    // Create position with requirements
+    // Create position with requirements as string array
     const position = await prisma.position.create({
       data: {
         title: data.title,
@@ -49,17 +49,12 @@ export async function POST(
         qualifications: data.qualifications,
         equity: data.equity,
         stipend: data.stipend,
+        requirements: data.requirements, // Now directly using the string array
         startup: {
           connect: { id: context.params.id },
         },
-        requirements: {
-          create: data.requirements.map((skill: string) => ({
-            skill,
-          })),
-        },
       },
       include: {
-        requirements: true,
         applications: {
           include: {
             user: {
@@ -77,7 +72,13 @@ export async function POST(
 
     return NextResponse.json(position);
   } catch (error) {
-    console.error('Error creating position:', error);
+    if (error instanceof Error) {
+      console.error('Error creating position:', error.message);
+      return NextResponse.json(
+        { error: error.message || 'Internal server error' },
+        { status: 500 }
+      );
+    }
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
