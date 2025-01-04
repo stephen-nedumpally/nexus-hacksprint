@@ -9,6 +9,7 @@ import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Startup } from '@/types/startup';
+import { useToast } from "@/components/ui/use-toast";
 
 interface Application {
   id: string;
@@ -27,24 +28,32 @@ interface Application {
 
 async function fetchMyStartup() {
   const res = await fetch('/api/startups/my');
-  if (!res.ok) return null;
-  return res.json();
+  if (!res.ok) {
+    throw new Error('Failed to fetch startup');
+  }
+  const data = await res.json();
+  return data;
 }
 
 async function fetchMyApplications() {
   const res = await fetch('/api/applications/my');
-  if (!res.ok) return [];
-  return res.json();
+  if (!res.ok) {
+    throw new Error('Failed to fetch applications');
+  }
+  const data = await res.json();
+  return data;
 }
 
 export default function ProfilePage() {
   const { data: session } = useSession();
-  const { data: myStartup } = useQuery<Startup>({
+  const { toast } = useToast();
+
+  const { data: myStartup, isError: startupError } = useQuery<Startup>({
     queryKey: ['my-startup'],
     queryFn: fetchMyStartup,
   });
 
-  const { data: applications } = useQuery<Application[]>({
+  const { data: applications, isError: applicationsError } = useQuery<Application[]>({
     queryKey: ['my-applications'],
     queryFn: fetchMyApplications,
   });
@@ -76,61 +85,79 @@ export default function ProfilePage() {
           </TabsList>
 
           <TabsContent value="applications" className="space-y-6">
-            <div className="grid gap-6">
-              {applications?.map((application) => (
-                <Card key={application.id}>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle>{application.startup.name}</CardTitle>
-                        <p className="text-sm text-gray-400">
-                          {application.startup.positions.find(p => p.id === application.positionId)?.title}
-                        </p>
+            {applicationsError ? (
+              <Card>
+                <CardContent className="py-8">
+                  <p className="text-center text-red-400">
+                    Failed to load applications. Please try again later.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-6">
+                {applications?.map((application) => (
+                  <Card key={application.id}>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle>{application.startup.name}</CardTitle>
+                          <p className="text-sm text-gray-400">
+                            {application.startup.positions.find(p => p.id === application.positionId)?.title}
+                          </p>
+                        </div>
+                        <Badge
+                          variant={
+                            application.status === 'ACCEPTED' ? 'success' :
+                            application.status === 'REJECTED' ? 'destructive' :
+                            'default'
+                          }
+                        >
+                          {application.status}
+                        </Badge>
                       </div>
-                      <Badge
-                        variant={
-                          application.status === 'ACCEPTED' ? 'success' :
-                          application.status === 'REJECTED' ? 'destructive' :
-                          'default'
-                        }
-                      >
-                        {application.status}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-400">
-                      Applied on {new Date(application.createdAt).toLocaleDateString()}
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-gray-400">
+                        Applied on {new Date(application.createdAt).toLocaleDateString()}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
 
-              {applications?.length === 0 && (
-                <Card>
-                  <CardContent className="py-8">
-                    <p className="text-center text-gray-400">
-                      You haven't applied to any positions yet.{' '}
-                      <Link href="/startups" className="text-lime-400 hover:underline">
-                        Browse startups
-                      </Link>
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
+                {applications?.length === 0 && (
+                  <Card>
+                    <CardContent className="py-8">
+                      <p className="text-center text-gray-400">
+                        You haven't applied to any positions yet.{' '}
+                        <Link href="/startups" className="text-lime-400 hover:underline">
+                          Browse startups
+                        </Link>
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="startup">
-            {myStartup ? (
+            {startupError ? (
+              <Card>
+                <CardContent className="py-8">
+                  <p className="text-center text-red-400">
+                    Failed to load startup. Please try again later.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : myStartup ? (
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>{myStartup.name}</CardTitle>
                     <div className="flex items-center gap-4">
                       <div className="text-sm text-gray-400">
-                        <span className="font-medium text-lime-400">{myStartup.likes || 0}</span> likes •{' '}
-                        <span className="font-medium text-red-400">{myStartup.dislikes || 0}</span> dislikes
+                        <span className="font-medium text-lime-400">{myStartup.likes?.length || 0}</span> likes •{' '}
+                        <span className="font-medium text-red-400">{myStartup.dislikes?.length || 0}</span> dislikes
                       </div>
                       <Link href={`/startups/${myStartup.id}/edit`}>
                         <Button variant="outline">Edit Startup</Button>
@@ -148,19 +175,26 @@ export default function ProfilePage() {
                             <h4 className="font-medium">{position.title}</h4>
                             <p className="text-sm text-gray-400">{position.description}</p>
                           </div>
-                          <Button variant="outline" size="sm">
-                            View Applications
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary">
+                              {position.applications?.length || 0} Applications
+                            </Badge>
+                            <Button variant="outline" size="sm">
+                              View Applications
+                            </Button>
+                          </div>
                         </div>
                       ))}
                     </div>
                   </div>
 
                   <div className="flex justify-end">
-                    <Button className="bg-lime-400 text-black hover:bg-lime-400/90">
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Position
-                    </Button>
+                    <Link href={`/startups/${myStartup.id}/positions/new`}>
+                      <Button className="bg-lime-400 text-black hover:bg-lime-400/90">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Position
+                      </Button>
+                    </Link>
                   </div>
                 </CardContent>
               </Card>

@@ -7,9 +7,29 @@ export async function GET(request: NextRequest) {
   try {
     const startups = await prisma.startup.findMany({
       include: {
-        positions: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+          },
+        },
+        positions: true,
+        likes: true,
+        dislikes: true,
+        comments: {
           include: {
-            requirements: true,
+            user: {
+              select: {
+                id: true,
+                name: true,
+                image: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
           },
         },
       },
@@ -22,7 +42,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching startups:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to fetch startups' },
       { status: 500 }
     );
   }
@@ -31,7 +51,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -40,6 +60,7 @@ export async function POST(request: NextRequest) {
 
     const data = await request.json();
 
+    // Create startup with positions
     const startup = await prisma.startup.create({
       data: {
         name: data.name,
@@ -49,37 +70,30 @@ export async function POST(request: NextRequest) {
         teamSize: data.teamSize,
         domain: data.domain,
         website: data.website,
-        problemStatement: data.problemStatement,
+        problem: data.problem,
         solution: data.solution,
-        techStack: data.techStack,
-        tam: data.tam,
-        sam: data.sam,
-        competitors: data.competitors,
-        mrr: data.mrr,
-        stage: data.stage,
-        fundingRound: data.fundingRound,
-        fundingRaised: data.fundingRaised,
+        market: data.market,
         traction: data.traction,
+        funding: data.funding,
+        user: {
+          connect: { id: session.user.id },
+        },
         positions: {
           create: data.positions.map((position: any) => ({
             title: position.title,
             description: position.description,
-            requirements: {
-              create: {
-                skills: position.requirements.skills,
-                experience: position.requirements.experience,
-                education: position.requirements.education,
-              },
-            },
+            type: position.type,
+            location: position.location,
+            responsibilities: position.responsibilities,
+            qualifications: position.qualifications,
+            equity: position.equity,
+            stipend: position.stipend,
+            requirements: position.requirements,
           })),
         },
       },
       include: {
-        positions: {
-          include: {
-            requirements: true,
-          },
-        },
+        positions: true,
       },
     });
 

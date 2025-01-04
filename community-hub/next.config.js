@@ -3,6 +3,8 @@ const nextConfig = {
   images: {
     domains: [
       'lh3.googleusercontent.com', // For Google user profile images
+      'encrypted-tbn0.gstatic.com', // For startup logos
+      'api.dicebear.com', // For generated avatars
     ],
   },
   experimental: {

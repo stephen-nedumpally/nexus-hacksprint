@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession, signIn } from 'next-auth/react';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -12,39 +12,55 @@ import Link from 'next/link';
 import { formatNumber, formatDate } from '@/lib/utils';
 import { Startup } from '@/types/startup';
 import { ViewOpportunitiesDialog } from '@/components/startups/view-opportunities-dialog';
-import { toast } from 'sonner';
+import { useToast } from "@/components/ui/use-toast";
 
 export default function StartupDetailsPage() {
   const { data: session, status } = useSession();
   const [startup, setStartup] = useState<Startup | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedPosition, setSelectedPosition] = useState<string | null>(null);
+  const [showOpportunities, setShowOpportunities] = useState(false);
+  const [selectedPositionId, setSelectedPositionId] = useState<string | undefined>();
   const [comment, setComment] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState('');
+  const { toast } = useToast();
+
+  const fetchStartupData = async (startupId: string) => {
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/startups/${startupId}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to fetch startup');
+      setStartup(data);
+    } catch (error) {
+      console.error('Error fetching startup:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to fetch startup details"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const path = window.location.pathname;
     const startupId = path.split('/').pop();
-    
     if (!startupId) return;
-    
-    setLoading(true);
-    fetch(`/api/startups/${startupId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setStartup(data);
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error('Error fetching startup:', error);
-        setLoading(false);
-      });
+    fetchStartupData(startupId);
   }, []);
+
+  const handleAuthAction = (action: string) => {
+    if (!session) {
+      signIn();
+      return;
+    }
+  };
 
   const handleLike = async () => {
     if (!startup || !session) {
-      toast.error('Please sign in to like this startup');
+      signIn();
       return;
     }
 
@@ -56,15 +72,22 @@ export default function StartupDetailsPage() {
       
       const updatedStartup = await res.json();
       setStartup(updatedStartup);
-      toast.success('Liked startup successfully');
+      toast({
+        title: "Success",
+        description: "Liked startup successfully",
+      });
     } catch (error) {
-      toast.error('Failed to like startup');
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to like startup",
+      });
     }
   };
 
   const handleDislike = async () => {
     if (!startup || !session) {
-      toast.error('Please sign in to dislike this startup');
+      signIn();
       return;
     }
 
@@ -76,20 +99,31 @@ export default function StartupDetailsPage() {
       
       const updatedStartup = await res.json();
       setStartup(updatedStartup);
-      toast.success('Disliked startup successfully');
+      toast({
+        title: "Success",
+        description: "Disliked startup successfully",
+      });
     } catch (error) {
-      toast.error('Failed to dislike startup');
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to dislike startup",
+      });
     }
   };
 
   const handleComment = async () => {
     if (!startup || !session) {
-      toast.error('Please sign in to comment');
+      signIn();
       return;
     }
 
     if (!comment.trim()) {
-      toast.error('Please enter a comment');
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please enter a comment",
+      });
       return;
     }
 
@@ -106,20 +140,31 @@ export default function StartupDetailsPage() {
       const updatedStartup = await res.json();
       setStartup(updatedStartup);
       setComment('');
-      toast.success('Comment added successfully');
+      toast({
+        title: "Success",
+        description: "Comment added successfully",
+      });
     } catch (error) {
-      toast.error('Failed to add comment');
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to add comment",
+      });
     }
   };
 
   const handleReply = async (commentId: string) => {
     if (!startup || !session) {
-      toast.error('Please sign in to reply');
+      signIn();
       return;
     }
 
     if (!replyContent.trim()) {
-      toast.error('Please enter a reply');
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please enter a reply",
+      });
       return;
     }
 
@@ -137,18 +182,26 @@ export default function StartupDetailsPage() {
       setStartup(updatedStartup);
       setReplyTo(null);
       setReplyContent('');
-      toast.success('Reply added successfully');
+      toast({
+        title: "Success",
+        description: "Reply added successfully",
+      });
     } catch (error) {
-      toast.error('Failed to add reply');
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to add reply",
+      });
     }
   };
 
   const handleApply = (positionId: string) => {
     if (status === 'unauthenticated') {
-      toast.error('Please sign in to apply');
+      signIn();
       return;
     }
-    setSelectedPosition(positionId);
+    setSelectedPositionId(positionId);
+    setShowOpportunities(true);
   };
 
   if (loading) {
@@ -203,7 +256,10 @@ export default function StartupDetailsPage() {
             </div>
             <Button 
               className="bg-lime-400 text-black hover:bg-lime-400/90"
-              onClick={() => setSelectedPosition('all')}
+              onClick={() => {
+                setShowOpportunities(true);
+                setSelectedPositionId(undefined);
+              }}
             >
               View All Positions
             </Button>
@@ -221,7 +277,7 @@ export default function StartupDetailsPage() {
             </div>
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Open Positions</p>
-              <p className="text-2xl font-semibold">{startup.positions.length}</p>
+              <p className="text-2xl font-semibold">{startup.positions?.length}</p>
             </div>
           </div>
 
@@ -231,7 +287,6 @@ export default function StartupDetailsPage() {
               variant="ghost" 
               className={`flex items-center gap-2 ${userHasLiked ? 'text-lime-400' : 'text-gray-400 hover:text-lime-400'}`}
               onClick={handleLike}
-              disabled={!session}
             >
               <ThumbsUp className="h-5 w-5" />
               <span className="font-medium">{formatNumber(startup.likes?.length)}</span>
@@ -240,7 +295,6 @@ export default function StartupDetailsPage() {
               variant="ghost" 
               className={`flex items-center gap-2 ${userHasDisliked ? 'text-red-400' : 'text-gray-400 hover:text-red-400'}`}
               onClick={handleDislike}
-              disabled={!session}
             >
               <ThumbsDown className="h-5 w-5" />
               <span className="font-medium">{formatNumber(startup.dislikes?.length)}</span>
@@ -276,22 +330,20 @@ export default function StartupDetailsPage() {
                 <h2 className="text-2xl font-semibold text-white mb-4">Comments</h2>
                 
                 {/* Add Comment */}
-                {session && (
-                  <div className="mb-6 space-y-2">
-                    <Textarea
-                      placeholder="Add a comment..."
-                      value={comment}
-                      onChange={(e) => setComment(e.target.value)}
-                      className="bg-black/50 border-white/10 text-white"
-                    />
-                    <Button 
-                      onClick={handleComment}
-                      className="bg-lime-400 text-black hover:bg-lime-400/90"
-                    >
-                      Post Comment
-                    </Button>
-                  </div>
-                )}
+                <div className="mb-6 space-y-2">
+                  <Textarea
+                    placeholder="Add a comment..."
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    className="bg-black/50 border-white/10 text-white"
+                  />
+                  <Button 
+                    onClick={handleComment}
+                    className="bg-lime-400 text-black hover:bg-lime-400/90"
+                  >
+                    Post Comment
+                  </Button>
+                </div>
 
                 {/* Comments List */}
                 <div className="space-y-4">
@@ -303,17 +355,15 @@ export default function StartupDetailsPage() {
                             <span className="font-medium text-white">{comment.user.name}</span>
                             <span className="text-sm text-gray-400">{formatDate(comment.createdAt)}</span>
                           </div>
-                          {session && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-gray-400 hover:text-blue-400"
-                              onClick={() => setReplyTo(replyTo === comment.id ? null : comment.id)}
-                            >
-                              <Reply className="h-4 w-4 mr-1" />
-                              Reply
-                            </Button>
-                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-gray-400 hover:text-blue-400"
+                            onClick={() => setReplyTo(replyTo === comment.id ? null : comment.id)}
+                          >
+                            <Reply className="h-4 w-4 mr-1" />
+                            Reply
+                          </Button>
                         </div>
                         <p className="text-gray-400">{comment.content}</p>
 
@@ -388,6 +438,22 @@ export default function StartupDetailsPage() {
                 </div>
               </Card>
 
+              <Card className="bg-black/50 border border-white/10">
+                <div className="p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">Company Details</h3>
+                  <div className="grid grid-cols-2 gap-8 mb-8">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Founded</p>
+                      <p className="font-medium">{formatDate(startup.founded)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Team Size</p>
+                      <p className="font-medium">{startup.teamSize || 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+
               {startup.website && (
                 <Button 
                   className="w-full bg-black text-lime-400 border border-lime-400 hover:bg-lime-400/10"
@@ -402,14 +468,12 @@ export default function StartupDetailsPage() {
         </div>
       </div>
 
-      {selectedPosition && (
-        <ViewOpportunitiesDialog
-          startup={startup}
-          initialPositionId={selectedPosition === 'all' ? undefined : selectedPosition}
-          open={!!selectedPosition}
-          onOpenChange={() => setSelectedPosition(null)}
-        />
-      )}
+      <ViewOpportunitiesDialog
+        startup={startup}
+        open={showOpportunities}
+        onOpenChange={setShowOpportunities}
+        selectedPositionId={selectedPositionId}
+      />
     </main>
   );
 }

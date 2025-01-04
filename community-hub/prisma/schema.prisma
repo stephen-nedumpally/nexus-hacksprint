@@ -73,10 +73,11 @@ model Startup {
   problem     String
   solution    String
   market      String
-  traction    String
-  funding     String
+  traction    String?
+  funding     String?
   teamSize    Int      @default(1)
-  founded     DateTime @default(now())
+  foundedYear Int      @default(2024)
+  logo        String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -93,28 +94,23 @@ model Startup {
 }
 
 model Position {
-  id           String        @id @default(cuid())
-  title        String
-  description  String
-  startupId    String
-  startup      Startup       @relation(fields: [startupId], references: [id])
-  requirements Requirements?
-  applications Application[]
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id               String        @id @default(cuid())
+  title            String
+  description      String
+  type             String        @default("FULL_TIME") // FULL_TIME, PART_TIME, INTERNSHIP, CONTRACT
+  location         String
+  responsibilities String
+  qualifications   String
+  equity           String?
+  stipend          String?
+  requirements     String[]      // Array of required skills
+  startupId        String
+  startup          Startup       @relation(fields: [startupId], references: [id])
+  applications     Application[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 
   @@index([startupId])
-}
-
-model Requirements {
-  id          String   @id @default(cuid())
-  skills      String[]
-  experience  Int
-  education   String?
-  positionId  String   @unique
-  position    Position @relation(fields: [positionId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 }
 
 model Application {

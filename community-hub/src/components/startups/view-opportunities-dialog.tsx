@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -8,37 +8,81 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from "@/components/ui/use-toast";
 import { Startup } from '@/types/startup';
 
 interface ViewOpportunitiesDialogProps {
-  startup: Startup;
+  startup: Startup | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedPositionId?: string;
+  onApplicationSuccess?: () => Promise<void>;
 }
 
 export function ViewOpportunitiesDialog({ 
   startup, 
   open, 
   onOpenChange,
-  selectedPositionId 
+  selectedPositionId,
+  onApplicationSuccess
 }: ViewOpportunitiesDialogProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [selectedTab, setSelectedTab] = useState(
-    selectedPositionId 
-      ? startup.positions.findIndex(p => p.id === selectedPositionId).toString()
-      : "0"
-  );
+  const { toast } = useToast();
+  const [selectedTab, setSelectedTab] = useState("0");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleApply = async (positionId: string) => {
+  // Update selected tab when selectedPositionId changes
+  useEffect(() => {
+    if (startup && selectedPositionId) {
+      const index = startup.positions.findIndex(p => p.id === selectedPositionId);
+      setSelectedTab(index >= 0 ? index.toString() : "0");
+    } else {
+      setSelectedTab("0");
+    }
+  }, [selectedPositionId, startup]);
+
+  const hasApplied = (position: any) => {
+    return position.applications?.some((app: any) => 
+      app.userId === session?.user?.id
+    );
+  };
+
+  const getApplicationStatus = (position: any) => {
+    const application = position.applications?.find((app: any) => 
+      app.userId === session?.user?.id
+    );
+    return application?.status;
+  };
+
+  const handleApply = async (position: any) => {
     if (status === 'unauthenticated') {
-      onOpenChange(false); // Close the dialog
-      router.push(`/auth/signin?callbackUrl=/startups/${startup.id}`);
+      onOpenChange(false);
+      router.push(`/auth/signin?callbackUrl=/startups/${startup?.id}`);
+      return;
+    }
+
+    if (!startup) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Startup information not available"
+      });
+      return;
+    }
+
+    // Check if already applied
+    if (hasApplied(position)) {
+      toast({
+        title: "Already Applied",
+        description: `You have already applied for the ${position.title} position. Current status: ${getApplicationStatus(position)}`,
+        duration: 3000,
+      });
       return;
     }
 
     try {
+      setIsSubmitting(true);
       const response = await fetch('/api/applications', {
         method: 'POST',
         headers: {
@@ -46,82 +90,131 @@ export function ViewOpportunitiesDialog({
         },
         body: JSON.stringify({
           startupId: startup.id,
-          positionId,
+          positionId: position.id,
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error('Failed to apply');
+        throw new Error(data.error || 'Failed to submit application');
       }
 
-      // Close dialog after successful application
+      toast({
+        title: "Application Submitted",
+        description: `Successfully applied for ${position.title}`,
+        duration: 3000,
+      });
+
+      if (onApplicationSuccess) {
+        await onApplicationSuccess();
+      }
+
       onOpenChange(false);
     } catch (error) {
-      console.error('Error applying:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to submit application",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  if (!startup) return null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Open Positions at {startup.name}</DialogTitle>
+          <DialogTitle>Opportunities at {startup.name}</DialogTitle>
         </DialogHeader>
-
-        <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-          <TabsList className="grid grid-cols-2 lg:grid-cols-3 mb-4">
+        
+        {startup.positions?.length > 0 ? (
+          <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
+            <TabsList className="w-full">
+              {startup.positions.map((position, index) => (
+                <TabsTrigger
+                  key={position.id}
+                  value={index.toString()}
+                  className="flex-1"
+                >
+                  {position.title}
+                </TabsTrigger>
+              ))}
+            </TabsList>
             {startup.positions.map((position, index) => (
-              <TabsTrigger key={position.id} value={index.toString()}>
-                {position.title}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-
-          {startup.positions.map((position, index) => (
-            <TabsContent key={position.id} value={index.toString()}>
-              <Card>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
+              <TabsContent key={position.id} value={index.toString()}>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <span>{position.title}</span>
+                      <Badge variant="secondary">
+                        {position.type}
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
                     <div>
-                      <CardTitle>{position.title}</CardTitle>
-                      <p className="text-muted-foreground mt-2">{position.description}</p>
+                      <h4 className="text-sm font-semibold mb-2">Location</h4>
+                      <p className="text-sm text-muted-foreground">{position.location}</p>
                     </div>
+                    
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2">Required Skills</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {position.requirements.map((skill) => (
+                          <Badge key={skill} variant="outline">
+                            {skill}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2">Responsibilities</h4>
+                      <p className="text-sm text-muted-foreground">{position.responsibilities}</p>
+                    </div>
+
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2">Qualifications</h4>
+                      <p className="text-sm text-muted-foreground">{position.qualifications}</p>
+                    </div>
+
+                    <div className="flex flex-col space-y-2">
+                      <div>
+                        <h4 className="text-sm font-semibold">Equity</h4>
+                        <p className="text-sm text-muted-foreground">{position.equity}</p>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-semibold">Stipend</h4>
+                        <p className="text-sm text-muted-foreground">{position.stipend}</p>
+                      </div>
+                    </div>
+
                     <Button 
-                      className="bg-lime-400 text-black hover:bg-lime-400/90"
-                      onClick={() => handleApply(position.id)}
+                      className="w-full"
+                      onClick={() => handleApply(position)}
+                      disabled={isSubmitting || hasApplied(position)}
                     >
-                      {status === 'unauthenticated' ? 'Sign in to Apply' : 'Apply Now'}
+                      {hasApplied(position) 
+                        ? `Applied - ${getApplicationStatus(position)}`
+                        : isSubmitting 
+                          ? "Applying..." 
+                          : "Apply Now"
+                      }
                     </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div>
-                    <h4 className="text-sm font-medium mb-2">Required Skills</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {position.requirements.skills.map((skill) => (
-                        <Badge key={skill} variant="outline">
-                          {skill}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="text-sm font-medium mb-2">Experience</h4>
-                    <p>{position.requirements.experience} years</p>
-                  </div>
-
-                  {position.requirements.education && (
-                    <div>
-                      <h4 className="text-sm font-medium mb-2">Education</h4>
-                      <p>{position.requirements.education}</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          ))}
-        </Tabs>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            ))}
+          </Tabs>
+        ) : (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">No open positions at the moment.</p>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

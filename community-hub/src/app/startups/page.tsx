@@ -1,31 +1,93 @@
 'use client';
 
-import { useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, ThumbsUp, ThumbsDown, MessageSquare } from 'lucide-react';
-import Image from "next/image";
-import Link from "next/link";
-import { useQuery } from '@tanstack/react-query';
-import { fetchStartups } from '@/lib/api/startups';
-import { CreateStartupForm } from '@/components/startups/create-startup-form';
-import { ViewOpportunitiesDialog } from '@/components/startups/view-opportunities-dialog';
+import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { ThumbsUp, ThumbsDown, MessageSquare, Plus } from 'lucide-react';
 import { formatDate, formatNumber } from '@/lib/utils';
-import type { Startup } from '@/types/startup';
+import { ViewOpportunitiesDialog } from '@/components/startups/view-opportunities-dialog';
+
+interface Startup {
+  id: string;
+  name: string;
+  description: string;
+  domain: string[];
+  logo?: string;
+  teamSize: number;
+  foundedYear: number;
+  positions: {
+    id: string;
+    title: string;
+    type: string;
+    location: string;
+    requirements: string[];
+  }[];
+  likes: { id: string; userId: string }[];
+  dislikes: { id: string; userId: string }[];
+  comments: {
+    id: string;
+    content: string;
+    user: {
+      id: string;
+      name: string;
+      image: string;
+    };
+  }[];
+  user: {
+    id: string;
+    name: string;
+    image: string;
+  };
+}
 
 export default function StartupsPage() {
   const [selectedStartup, setSelectedStartup] = useState<Startup | null>(null);
-  const { data: startups, isLoading } = useQuery<Startup[]>({
-    queryKey: ['startups'],
-    queryFn: fetchStartups,
-  });
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [startups, setStartups] = useState<Startup[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
+  const cardRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
-  if (isLoading) {
+  useEffect(() => {
+    fetch('/api/startups')
+      .then((res) => res.json())
+      .then((data) => {
+        setStartups(data || []);
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error('Error fetching startups:', error);
+        setLoading(false);
+      });
+  }, []);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>, startupId: string) => {
+    if (!cardRefs.current[startupId]) return;
+    
+    const rect = cardRefs.current[startupId]!.getBoundingClientRect();
+    setMousePosition({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    });
+  };
+
+  if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-lime-400"></div>
+      <div className="min-h-screen bg-black py-24">
+        <div className="container mx-auto px-4">
+          <div className="animate-pulse space-y-8">
+            <div className="h-12 w-48 bg-white/5 rounded" />
+            <div className="grid md:grid-cols-3 gap-8">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-64 bg-white/5 rounded" />
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -33,16 +95,15 @@ export default function StartupsPage() {
   return (
     <main className="min-h-screen bg-black py-24">
       <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center mb-12">
+        <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-bold text-white mb-4">Startup Opportunities</h1>
-            <p className="text-gray-400 max-w-2xl">
-              Discover innovative startups and projects that are shaping the future. Join them in their journey and be part of something extraordinary.
+            <h1 className="text-3xl font-bold mb-2">Startups</h1>
+            <p className="text-muted-foreground">
+              Browse and connect with innovative startups
             </p>
           </div>
-          
           <Link href="/startups/create">
-            <Button className="bg-lime-400 text-black hover:bg-lime-400/90">
+            <Button>
               <Plus className="mr-2 h-4 w-4" />
               Create Startup
             </Button>
@@ -50,12 +111,29 @@ export default function StartupsPage() {
         </div>
 
         <div className="grid md:grid-cols-3 gap-8">
-          {startups?.map((startup: Startup) => (
+          {startups.map((startup: Startup) => (
             <Card 
               key={startup.id} 
+              ref={el => cardRefs.current[startup.id] = el}
               className="group relative overflow-hidden border border-white/10 bg-black/50 backdrop-blur-sm hover:border-lime-400/50 transition-all duration-300"
+              onMouseMove={(e) => handleMouseMove(e, startup.id)}
+              onMouseEnter={() => setHoveredCardId(startup.id)}
+              onMouseLeave={() => setHoveredCardId(null)}
+              style={{
+                '--mouse-x': `${mousePosition.x}px`,
+                '--mouse-y': `${mousePosition.y}px`,
+              } as React.CSSProperties}
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-lime-400/10 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+              {hoveredCardId === startup.id && (
+                <div 
+                  className="absolute pointer-events-none transition-opacity duration-300"
+                  style={{
+                    background: 'radial-gradient(circle 100px at var(--mouse-x) var(--mouse-y), rgba(163, 230, 53, 0.15), transparent 100%)',
+                    width: '100%',
+                    height: '100%',
+                  }}
+                />
+              )}
               <div className="relative p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center space-x-4">
@@ -69,69 +147,76 @@ export default function StartupsPage() {
                           className="rounded-full"
                         />
                       ) : (
-                        <div className="w-8 h-8 rounded-full bg-lime-400/20 flex items-center justify-center text-lime-400 font-semibold">
+                        <div className="text-xl font-bold text-lime-400">
                           {startup.name[0]}
                         </div>
                       )}
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-white">{startup.name}</h3>
-                      <p className="text-sm text-gray-400">{startup.domain.join(' • ')}</p>
+                      <h3 className="text-lg font-semibold">{startup.name}</h3>
+                      <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                        <span>{startup.teamSize} team members</span>
+                        <span>•</span>
+                        <span>Founded {startup.foundedYear || 'N/A'}</span>
+                      </div>
                     </div>
                   </div>
-                  <Badge variant="outline" className="border-lime-400/50 text-lime-400">
-                    {startup.positions.length > 0 ? 'Hiring' : 'Coming Soon'}
-                  </Badge>
                 </div>
-                <p className="text-gray-400 mb-6">
+
+                <p className="text-sm text-muted-foreground mb-4">
                   {startup.description}
                 </p>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-400">Open Positions</span>
-                    <span className="text-white font-medium">{startup.positions.length}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-400">Team Size</span>
-                    <span className="text-white font-medium">{startup.teamSize}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-400">Founded</span>
-                    <span className="text-white font-medium">{formatDate(startup.founded)}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-400">Interactions</span>
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-1">
-                        <ThumbsUp className="h-4 w-4 text-lime-400" />
-                        <span className="text-white font-medium">{formatNumber(startup.likes?.length)}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <ThumbsDown className="h-4 w-4 text-red-400" />
-                        <span className="text-white font-medium">{formatNumber(startup.dislikes?.length)}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <MessageSquare className="h-4 w-4 text-blue-400" />
-                        <span className="text-white font-medium">{formatNumber(startup.comments?.length)}</span>
-                      </div>
+
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {startup.domain.map((tag) => (
+                    <Badge
+                      key={tag}
+                      variant="secondary"
+                      className="bg-lime-400/10 hover:bg-lime-400/20 text-lime-400"
+                    >
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-1">
+                      <ThumbsUp className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">
+                        {startup.likes?.length || 0}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <ThumbsDown className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">
+                        {startup.dislikes?.length || 0}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">
+                        {startup.comments?.length || 0}
+                      </span>
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-3 mt-6">
-                  <Link 
-                    href={`/startups/${startup.id}`}
-                    className="flex-1"
-                  >
-                    <Button 
-                      className="w-full bg-black text-lime-400 border border-lime-400 hover:bg-lime-400/10"
+
+                <div className="flex gap-3">
+                  <Link href={`/startups/${startup.id}`} className="flex-1">
+                    <Button
                       variant="outline"
+                      className="w-full bg-black text-lime-400 border border-lime-400 hover:bg-lime-400/10"
                     >
                       View Details
                     </Button>
                   </Link>
-                  <Button 
+                  <Button
                     className="flex-1 bg-lime-400 text-black hover:bg-lime-400/90"
-                    onClick={() => setSelectedStartup(startup)}
+                    onClick={() => {
+                      setSelectedStartup(startup);
+                      setDialogOpen(true);
+                    }}
                   >
                     View Opportunities
                   </Button>
@@ -142,13 +227,11 @@ export default function StartupsPage() {
         </div>
       </div>
 
-      {selectedStartup && (
-        <ViewOpportunitiesDialog
-          startup={selectedStartup}
-          open={!!selectedStartup}
-          onOpenChange={() => setSelectedStartup(null)}
-        />
-      )}
+      <ViewOpportunitiesDialog
+        startup={selectedStartup}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+      />
     </main>
   );
 }

@@ -4,7 +4,7 @@ import React from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { CreateStartupForm } from '@/components/startups/create-startup-form';
+import CreateStartupForm from '@/components/startups/create-startup-form';
 
 export default function CreateStartupPage() {
   const { data: session, status } = useSession();

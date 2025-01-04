@@ -8,62 +8,67 @@ import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { SearchModal } from '@/components/startups/search-modal';
+import { domains, skills } from '@/data/startup-data';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/components/ui/use-toast';
 import { Plus, X } from 'lucide-react';
+
+const positionSchema = z.object({
+  title: z.string().min(2, 'Title must be at least 2 characters'),
+  description: z.string().min(10, 'Description must be at least 10 characters'),
+  type: z.enum(['FULL_TIME', 'PART_TIME', 'INTERNSHIP', 'CONTRACT']),
+  location: z.string().min(2, 'Location must be at least 2 characters'),
+  requirements: z.array(z.string()).min(1, 'At least one skill is required'),
+  responsibilities: z.string().min(10, 'Responsibilities must be at least 10 characters'),
+  qualifications: z.string().min(10, 'Qualifications must be at least 10 characters'),
+  equity: z.string().optional(),
+  stipend: z.string().optional(),
+});
 
 const startupFormSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
-  logo: z.string().url().optional(),
-  foundedYear: z.number().min(2000).max(new Date().getFullYear()),
-  teamSize: z.number().min(1),
+  logo: z.string().url().optional().or(z.literal('')),
+  foundedYear: z.coerce.number().min(2000).max(new Date().getFullYear()),
+  teamSize: z.coerce.number().min(1),
   domain: z.array(z.string()).min(1, 'At least one domain is required'),
-  website: z.string().url().optional(),
-  problemStatement: z.string().min(20, 'Problem statement must be at least 20 characters'),
+  website: z.string().url().optional().or(z.literal('')),
+  problem: z.string().min(20, 'Problem statement must be at least 20 characters'),
   solution: z.string().min(20, 'Solution must be at least 20 characters'),
-  techStack: z.array(z.string()).min(1, 'At least one technology is required'),
-  tam: z.number().min(0, 'TAM must be a positive number'),
-  sam: z.number().min(0, 'SAM must be a positive number'),
-  competitors: z.number().min(0, 'Number of competitors must be a positive number'),
-  mrr: z.number().min(0, 'MRR must be a positive number').optional(),
-  stage: z.string(),
-  fundingRound: z.string().optional(),
-  fundingRaised: z.number().min(0, 'Funding raised must be a positive number').optional(),
+  market: z.string().min(1, 'Market size is required'),
   traction: z.string().optional(),
-  positions: z.array(z.object({
-    title: z.string().min(2, 'Title must be at least 2 characters'),
-    description: z.string().min(10, 'Description must be at least 10 characters'),
-    requirements: z.object({
-      skills: z.array(z.string()).min(1, 'At least one skill is required'),
-      experience: z.number().min(0, 'Experience must be a positive number'),
-      education: z.string().optional(),
-    }),
-  })).min(1, 'At least one position is required'),
+  funding: z.string().optional(),
+  positions: z.array(positionSchema),
 });
 
 type StartupFormValues = z.infer<typeof startupFormSchema>;
 
-export function CreateStartupForm() {
+export default function CreateStartupForm() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [openDomainModal, setOpenDomainModal] = useState(false);
+  const [openSkillsModal, setOpenSkillsModal] = useState(false);
+  const [currentPositionIndex, setCurrentPositionIndex] = useState<number | null>(null);
+  const { toast } = useToast();
 
   const form = useForm<StartupFormValues>({
     resolver: zodResolver(startupFormSchema),
     defaultValues: {
-      positions: [
-        {
-          title: '',
-          description: '',
-          requirements: {
-            skills: [],
-            experience: 0,
-            education: '',
-          },
-        },
-      ],
-      techStack: [],
+      name: '',
+      description: '',
+      logo: '',
+      foundedYear: new Date().getFullYear(),
+      teamSize: 1,
       domain: [],
+      website: '',
+      problem: '',
+      solution: '',
+      market: '',
+      traction: '',
+      funding: '',
+      positions: [],
     },
   });
 
@@ -78,14 +83,26 @@ export function CreateStartupForm() {
         body: JSON.stringify(values),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error('Failed to create startup');
+        throw new Error(data.error || 'Failed to create startup');
       }
 
-      const data = await response.json();
+      toast({
+        title: "Success",
+        description: "Startup created successfully",
+        duration: 5000,
+      });
+
       router.push(`/startups/${data.id}`);
     } catch (error) {
       console.error('Error creating startup:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : 'Failed to create startup',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -98,49 +115,26 @@ export function CreateStartupForm() {
       {
         title: '',
         description: '',
-        requirements: {
-          skills: [],
-          experience: 0,
-          education: '',
-        },
+        type: 'FULL_TIME',
+        location: '',
+        requirements: [],
+        responsibilities: '',
+        qualifications: '',
+        equity: '',
+        stipend: '',
       },
     ]);
   };
 
   const removePosition = (index: number) => {
     const positions = form.getValues('positions');
-    form.setValue('positions', positions.filter((_, i) => i !== index));
-  };
-
-  const addSkill = (positionIndex: number) => {
-    const skill = window.prompt('Enter skill:');
-    if (!skill) return;
-
-    const positions = form.getValues('positions');
-    positions[positionIndex].requirements.skills.push(skill);
+    positions.splice(index, 1);
     form.setValue('positions', positions);
-  };
-
-  const addTechStack = () => {
-    const tech = window.prompt('Enter technology:');
-    if (!tech) return;
-
-    const techStack = form.getValues('techStack');
-    form.setValue('techStack', [...techStack, tech]);
-  };
-
-  const addDomain = () => {
-    const domain = window.prompt('Enter domain:');
-    if (!domain) return;
-
-    const domains = form.getValues('domain');
-    form.setValue('domain', [...domains, domain]);
   };
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        {/* Basic Information */}
         <Card>
           <CardHeader>
             <CardTitle>Basic Information</CardTitle>
@@ -153,7 +147,7 @@ export function CreateStartupForm() {
                 <FormItem>
                   <FormLabel>Startup Name</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input placeholder="Enter startup name" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -167,7 +161,24 @@ export function CreateStartupForm() {
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Textarea {...field} />
+                    <Textarea
+                      placeholder="Brief description of your startup"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="logo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Logo URL</FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://example.com/logo.png" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -182,7 +193,13 @@ export function CreateStartupForm() {
                   <FormItem>
                     <FormLabel>Founded Year</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} />
+                      <Input
+                        type="number"
+                        min={2000}
+                        max={new Date().getFullYear()}
+                        {...field}
+                        onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -196,7 +213,12 @@ export function CreateStartupForm() {
                   <FormItem>
                     <FormLabel>Team Size</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} />
+                      <Input
+                        type="number"
+                        min={1}
+                        {...field}
+                        onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -209,47 +231,50 @@ export function CreateStartupForm() {
               name="website"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Website (Optional)</FormLabel>
+                  <FormLabel>Website</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input placeholder="https://example.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="logo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Logo URL (Optional)</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div>
+            <div className="space-y-2">
               <FormLabel>Domains</FormLabel>
-              <div className="flex flex-wrap gap-2 mb-2">
+              <div className="flex flex-wrap gap-2">
                 {form.watch('domain').map((domain, index) => (
-                  <div key={index} className="bg-secondary text-secondary-foreground px-3 py-1 rounded-full text-sm">
-                    {domain}
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 rounded-md bg-accent px-3 py-1"
+                  >
+                    <span>{domain}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newDomains = [...form.watch('domain')];
+                        newDomains.splice(index, 1);
+                        form.setValue('domain', newDomains);
+                      }}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      ×
+                    </button>
                   </div>
                 ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setOpenDomainModal(true)}
+                >
+                  Add Domain
+                </Button>
               </div>
-              <Button type="button" variant="outline" onClick={addDomain}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Domain
-              </Button>
+              <FormMessage>{form.formState.errors.domain?.message}</FormMessage>
             </div>
           </CardContent>
         </Card>
 
-        {/* Problem & Solution */}
         <Card>
           <CardHeader>
             <CardTitle>Problem & Solution</CardTitle>
@@ -257,12 +282,15 @@ export function CreateStartupForm() {
           <CardContent className="space-y-4">
             <FormField
               control={form.control}
-              name="problemStatement"
+              name="problem"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Problem Statement</FormLabel>
                   <FormControl>
-                    <Textarea {...field} />
+                    <Textarea
+                      placeholder="What problem are you solving?"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -276,156 +304,65 @@ export function CreateStartupForm() {
                 <FormItem>
                   <FormLabel>Solution</FormLabel>
                   <FormControl>
-                    <Textarea {...field} />
+                    <Textarea
+                      placeholder="How are you solving this problem?"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
-            <div>
-              <FormLabel>Tech Stack</FormLabel>
-              <div className="flex flex-wrap gap-2 mb-2">
-                {form.watch('techStack').map((tech, index) => (
-                  <div key={index} className="bg-secondary text-secondary-foreground px-3 py-1 rounded-full text-sm">
-                    {tech}
-                  </div>
-                ))}
-              </div>
-              <Button type="button" variant="outline" onClick={addTechStack}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Technology
-              </Button>
-            </div>
           </CardContent>
         </Card>
 
-        {/* Market & Traction */}
         <Card>
           <CardHeader>
             <CardTitle>Market & Traction</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="tam"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>TAM (in millions)</FormLabel>
-                    <FormControl>
-                      <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="sam"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>SAM (in millions)</FormLabel>
-                    <FormControl>
-                      <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="competitors"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Number of Competitors</FormLabel>
-                    <FormControl>
-                      <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="mrr"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>MRR (Optional)</FormLabel>
-                    <FormControl>
-                      <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="market"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Market Size</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Market size" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
               name="traction"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Key Metrics & Traction (Optional)</FormLabel>
+                  <FormLabel>Current Traction</FormLabel>
                   <FormControl>
-                    <Textarea {...field} />
+                    <Textarea
+                      placeholder="Describe your current traction"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-          </CardContent>
-        </Card>
-
-        {/* Funding */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Funding</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="stage"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Stage</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="fundingRound"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Current Round (Optional)</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
 
             <FormField
               control={form.control}
-              name="fundingRaised"
+              name="funding"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Total Funding Raised in Millions (Optional)</FormLabel>
+                  <FormLabel>Funding Status</FormLabel>
                   <FormControl>
-                    <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} />
+                    <Input
+                      placeholder="Current funding status"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -434,26 +371,34 @@ export function CreateStartupForm() {
           </CardContent>
         </Card>
 
-        {/* Open Positions */}
         <Card>
           <CardHeader>
-            <CardTitle>Open Positions</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Open Positions</CardTitle>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addPosition}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Position
+              </Button>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
             {form.watch('positions').map((_, index) => (
               <Card key={index}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-base">Position {index + 1}</CardTitle>
-                  {index > 0 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removePosition(index)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
+                <CardHeader className="relative">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-4 top-4"
+                    onClick={() => removePosition(index)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                  <CardTitle>Position {index + 1}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <FormField
@@ -461,9 +406,9 @@ export function CreateStartupForm() {
                     name={`positions.${index}.title`}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Title</FormLabel>
+                        <FormLabel>Position Title</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input placeholder="e.g., Full Stack Developer" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -477,37 +422,33 @@ export function CreateStartupForm() {
                       <FormItem>
                         <FormLabel>Description</FormLabel>
                         <FormControl>
-                          <Textarea {...field} />
+                          <Textarea
+                            placeholder="Brief description of the position"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
-                  <div>
-                    <FormLabel>Required Skills</FormLabel>
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {form.watch(`positions.${index}.requirements.skills`).map((skill, skillIndex) => (
-                        <div key={skillIndex} className="bg-secondary text-secondary-foreground px-3 py-1 rounded-full text-sm">
-                          {skill}
-                        </div>
-                      ))}
-                    </div>
-                    <Button type="button" variant="outline" onClick={() => addSkill(index)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Skill
-                    </Button>
-                  </div>
-
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
-                      name={`positions.${index}.requirements.experience`}
+                      name={`positions.${index}.type`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Experience (Years)</FormLabel>
+                          <FormLabel>Employment Type</FormLabel>
                           <FormControl>
-                            <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} />
+                            <select
+                              {...field}
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              <option value="FULL_TIME">Full Time</option>
+                              <option value="PART_TIME">Part Time</option>
+                              <option value="INTERNSHIP">Internship</option>
+                              <option value="CONTRACT">Contract</option>
+                            </select>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -516,12 +457,115 @@ export function CreateStartupForm() {
 
                     <FormField
                       control={form.control}
-                      name={`positions.${index}.requirements.education`}
+                      name={`positions.${index}.location`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Education (Optional)</FormLabel>
+                          <FormLabel>Location</FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input placeholder="e.g., Remote, New York" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <FormLabel>Required Skills</FormLabel>
+                    <div className="flex flex-wrap gap-2">
+                      {form.watch(`positions.${index}.requirements`).map((skill, skillIndex) => (
+                        <div
+                          key={skillIndex}
+                          className="flex items-center gap-2 rounded-md bg-accent px-3 py-1"
+                        >
+                          <span>{skill}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newSkills = [...form.watch(`positions.${index}.requirements`)];
+                              newSkills.splice(skillIndex, 1);
+                              form.setValue(`positions.${index}.requirements`, newSkills);
+                            }}
+                            className="text-muted-foreground hover:text-foreground"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setCurrentPositionIndex(index);
+                          setOpenSkillsModal(true);
+                        }}
+                      >
+                        Add Skill
+                      </Button>
+                    </div>
+                    <FormMessage>{form.formState.errors.positions?.[index]?.requirements?.message}</FormMessage>
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name={`positions.${index}.responsibilities`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Responsibilities</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="What will the candidate be responsible for?"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name={`positions.${index}.qualifications`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Qualifications</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="What qualifications are required?"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name={`positions.${index}.equity`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Equity</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., 0.5% - 1%" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name={`positions.${index}.stipend`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Stipend/Salary</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="e.g., $60,000 - $80,000/year"
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -531,17 +575,50 @@ export function CreateStartupForm() {
                 </CardContent>
               </Card>
             ))}
-
-            <Button type="button" variant="outline" onClick={addPosition}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Position
-            </Button>
           </CardContent>
         </Card>
 
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
-          {isSubmitting ? 'Creating...' : 'Create Startup'}
-        </Button>
+        <SearchModal
+          open={openDomainModal}
+          onOpenChange={setOpenDomainModal}
+          title="Select Domain"
+          items={domains}
+          selectedItems={form.watch('domain')}
+          onSelect={(domain) => {
+            if (!form.watch('domain').includes(domain)) {
+              form.setValue('domain', [...form.watch('domain'), domain]);
+            }
+          }}
+        />
+
+        <SearchModal
+          open={openSkillsModal}
+          onOpenChange={setOpenSkillsModal}
+          title="Select Skills"
+          items={skills}
+          selectedItems={currentPositionIndex !== null ? form.watch(`positions.${currentPositionIndex}.requirements`) : []}
+          onSelect={(skill) => {
+            if (currentPositionIndex !== null) {
+              const currentSkills = form.watch(`positions.${currentPositionIndex}.requirements`);
+              if (!currentSkills.includes(skill)) {
+                form.setValue(`positions.${currentPositionIndex}.requirements`, [...currentSkills, skill]);
+              }
+            }
+          }}
+        />
+
+        <div className="flex justify-end gap-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.back()}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Creating...' : 'Create Startup'}
+          </Button>
+        </div>
       </form>
     </Form>
   );
