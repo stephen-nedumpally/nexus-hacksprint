@@ -1,11 +1,18 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import { authOptions } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const startups = await prisma.startup.findMany({
+      include: {
+        positions: {
+          include: {
+            requirements: true,
+          },
+        },
+      },
       orderBy: {
         createdAt: 'desc',
       },
@@ -15,40 +22,72 @@ export async function GET() {
   } catch (error) {
     console.error('Error fetching startups:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch startups' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
+    if (!session) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    const data = await req.json();
-    
+    const data = await request.json();
+
     const startup = await prisma.startup.create({
       data: {
         name: data.name,
         description: data.description,
-        roles: data.roles,
-        requirements: data.requirements,
-        createdBy: session.user.id,
+        logo: data.logo,
+        foundedYear: data.foundedYear,
+        teamSize: data.teamSize,
+        domain: data.domain,
+        website: data.website,
+        problemStatement: data.problemStatement,
+        solution: data.solution,
+        techStack: data.techStack,
+        tam: data.tam,
+        sam: data.sam,
+        competitors: data.competitors,
+        mrr: data.mrr,
+        stage: data.stage,
+        fundingRound: data.fundingRound,
+        fundingRaised: data.fundingRaised,
+        traction: data.traction,
+        positions: {
+          create: data.positions.map((position: any) => ({
+            title: position.title,
+            description: position.description,
+            requirements: {
+              create: {
+                skills: position.requirements.skills,
+                experience: position.requirements.experience,
+                education: position.requirements.education,
+              },
+            },
+          })),
+        },
+      },
+      include: {
+        positions: {
+          include: {
+            requirements: true,
+          },
+        },
       },
     });
-    
+
     return NextResponse.json(startup);
   } catch (error) {
     console.error('Error creating startup:', error);
     return NextResponse.json(
-      { error: 'Failed to create startup' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

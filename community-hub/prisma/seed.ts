@@ -1,175 +1,198 @@
-import { PrismaClient } from '@prisma/client';
-
+const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 async function main() {
-  // Create test users
-  const testUser1 = await prisma.user.upsert({
-    where: { email: 'test1@example.com' },
-    update: {},
-    create: {
-      name: 'Test User 1',
-      email: 'test1@example.com',
-      verified: true,
-      image: 'https://avatars.githubusercontent.com/u/1?v=4',
-    },
-  });
+  // Clean the database
+  await prisma.requirements.deleteMany();
+  await prisma.position.deleteMany();
+  await prisma.startup.deleteMany();
 
-  const testUser2 = await prisma.user.upsert({
-    where: { email: 'test2@example.com' },
-    update: {},
-    create: {
-      name: 'Test User 2',
-      email: 'test2@example.com',
-      verified: true,
-      image: 'https://avatars.githubusercontent.com/u/2?v=4',
-    },
-  });
-
-  // Create startups
-  const startup1 = await prisma.startup.upsert({
-    where: { id: 'startup1' },
-    update: {},
-    create: {
-      id: 'startup1',
-      name: 'TechFlow',
-      description: 'Building the future of workflow automation with AI',
-      logo: 'https://picsum.photos/200',
-      foundedYear: 2024,
-      teamSize: 5,
-      domain: ['AI/ML', 'SaaS', 'Productivity'],
-      website: 'https://techflow.example.com',
-      userId: testUser1.id,
-      positions: {
-        create: [
-          {
-            title: 'Senior Frontend Developer',
-            description: 'Lead our frontend development efforts and shape our product UI/UX',
-            requirements: {
-              create: {
-                skills: ['React', 'TypeScript', 'Next.js'],
-                experience: 36,
-                education: "Bachelor's in Computer Science or related field",
-              },
-            },
-          },
-          {
-            title: 'ML Engineer',
-            description: 'Develop and implement machine learning models for our automation platform',
-            requirements: {
-              create: {
-                skills: ['Python', 'TensorFlow', 'PyTorch'],
-                experience: 24,
-                education: "Master's in Machine Learning or related field",
-              },
-            },
-          },
-        ],
-      },
-    },
-  });
-
-  const startup2 = await prisma.startup.upsert({
-    where: { id: 'startup2' },
-    update: {},
-    create: {
-      id: 'startup2',
-      name: 'GreenEarth Solutions',
-      description: 'Revolutionizing sustainability through innovative technology',
-      logo: 'https://picsum.photos/201',
+  const startups = [
+    {
+      name: 'EduTech AI',
+      description: 'Revolutionizing education through personalized AI-powered learning experiences.',
+      logo: null,
       foundedYear: 2023,
-      teamSize: 8,
-      domain: ['CleanTech', 'IoT', 'Sustainability'],
-      website: 'https://greenearth.example.com',
-      userId: testUser2.id,
-      positions: {
-        create: [
-          {
-            title: 'IoT Developer',
-            description: 'Develop IoT solutions for environmental monitoring',
-            requirements: {
-              create: {
-                skills: ['Arduino', 'Raspberry Pi', 'C++'],
-                experience: 24,
-                education: "Bachelor's in Electronics or Computer Engineering",
-              },
+      teamSize: 5,
+      domain: ['AI/ML', 'EdTech'],
+      website: 'https://edutechai.example.com',
+      problemStatement: 'Traditional one-size-fits-all education fails to address individual student needs, leading to poor engagement and learning outcomes.',
+      solution: 'AI-powered adaptive learning platform that creates personalized learning paths and provides real-time feedback based on student performance.',
+      techStack: ['Python', 'TensorFlow', 'React', 'Node.js', 'AWS'],
+      tam: 342000, // $342B
+      sam: 15000,  // $15B
+      competitors: 8,
+      mrr: 25000,
+      stage: 'Growth',
+      fundingRound: 'Seed',
+      fundingRaised: 2.5,
+      traction: '10,000+ active students, 85% improvement in learning outcomes',
+      positions: [
+        {
+          title: 'Senior ML Engineer',
+          description: 'Lead the development of our core AI learning algorithms.',
+          requirements: {
+            create: {
+              skills: ['Python', 'TensorFlow', 'PyTorch', 'MLOps'],
+              experience: 5,
+              education: 'MS/PhD in Computer Science or related field',
             },
           },
-        ],
-      },
+        },
+      ],
     },
-  });
-
-  // Add some reactions and comments
-  await prisma.startupReaction.createMany({
-    data: [
-      {
-        startupId: startup1.id,
-        userId: testUser2.id,
-        type: 'like',
-      },
-      {
-        startupId: startup2.id,
-        userId: testUser1.id,
-        type: 'like',
-      },
-    ],
-  });
-
-  await prisma.startupComment.createMany({
-    data: [
-      {
-        startupId: startup1.id,
-        userId: testUser2.id,
-        content: 'Amazing idea! The AI workflow automation space is really heating up.',
-      },
-      {
-        startupId: startup2.id,
-        userId: testUser1.id,
-        content: 'Love the focus on sustainability. Would love to learn more about your IoT implementation.',
-      },
-    ],
-  });
-
-  // Create study groups
-  const studyGroup1 = await prisma.studyGroup.create({
-    data: {
-      name: 'Advanced React Patterns',
-      description: 'Deep dive into React design patterns and performance optimization',
-      type: 'coding',
-      level: ['intermediate', 'advanced'],
-      roadmap: {
-        weeks: [
-          { topic: 'Advanced Hooks', duration: '1 week' },
-          { topic: 'Performance Optimization', duration: '1 week' },
-          { topic: 'State Management', duration: '2 weeks' },
-        ],
-      },
-      schedule: {
-        meetingDay: 'Monday',
-        meetingTime: '18:00',
-        duration: '2 hours',
-      },
-      members: {
-        create: [
-          {
-            userId: testUser1.id,
-            role: 'LEADER',
+    {
+      name: 'HealthSync',
+      description: 'AI-powered health monitoring and predictive analytics platform.',
+      logo: null,
+      foundedYear: 2024,
+      teamSize: 8,
+      domain: ['HealthTech', 'AI/ML'],
+      website: 'https://healthsync.example.com',
+      problemStatement: 'Lack of continuous health monitoring and early warning systems leads to delayed medical interventions.',
+      solution: 'Wearable device and AI platform that continuously monitors vital signs and predicts potential health issues before they become serious.',
+      techStack: ['Flutter', 'Python', 'TensorFlow', 'AWS', 'MongoDB'],
+      tam: 245000, // $245B
+      sam: 12000,  // $12B
+      competitors: 5,
+      mrr: 75000,
+      stage: 'MVP',
+      fundingRound: 'Pre-seed',
+      fundingRaised: 0.8,
+      traction: '500 beta users, 3 hospital partnerships',
+      positions: [
+        {
+          title: 'Mobile Developer',
+          description: 'Build and maintain our Flutter-based mobile application.',
+          requirements: {
+            create: {
+              skills: ['Flutter', 'Dart', 'Firebase', 'REST APIs'],
+              experience: 3,
+              education: 'BS in Computer Science or equivalent',
+            },
           },
-          {
-            userId: testUser2.id,
-            role: 'MEMBER',
-          },
-        ],
-      },
+        },
+      ],
     },
-  });
+    {
+      name: 'CarbonZero',
+      description: 'Helping businesses track and reduce their carbon footprint using IoT and AI.',
+      logo: null,
+      foundedYear: 2023,
+      teamSize: 12,
+      domain: ['IoT', 'AI/ML', 'Sustainability'],
+      website: 'https://carbonzero.example.com',
+      problemStatement: 'Companies struggle to accurately measure and effectively reduce their carbon emissions.',
+      solution: 'IoT sensors and AI platform that provides real-time carbon emission monitoring and automated optimization suggestions.',
+      techStack: ['Python', 'TensorFlow', 'React', 'Node.js', 'AWS IoT'],
+      tam: 180000, // $180B
+      sam: 8000,   // $8B
+      competitors: 6,
+      mrr: 150000,
+      stage: 'Scale',
+      fundingRound: 'Series A',
+      fundingRaised: 12.5,
+      traction: '50+ enterprise clients, reducing emissions by 25% on average',
+      positions: [
+        {
+          title: 'IoT Systems Engineer',
+          description: 'Design and implement IoT sensor networks and data collection systems.',
+          requirements: {
+            create: {
+              skills: ['IoT Protocols', 'Embedded Systems', 'C++', 'Python'],
+              experience: 4,
+              education: 'BS/MS in Electrical Engineering or Computer Science',
+            },
+          },
+        },
+      ],
+    },
+    {
+      name: 'FinLit',
+      description: 'Making financial literacy accessible to everyone through gamified learning.',
+      logo: null,
+      foundedYear: 2024,
+      teamSize: 6,
+      domain: ['FinTech', 'EdTech'],
+      website: 'https://finlit.example.com',
+      problemStatement: 'Lack of engaging financial education leads to poor financial decisions and literacy gaps.',
+      solution: 'Gamified financial education platform with real-world simulations and personalized learning paths.',
+      techStack: ['React Native', 'Node.js', 'MongoDB', 'AWS'],
+      tam: 95000,  // $95B
+      sam: 4000,   // $4B
+      competitors: 12,
+      mrr: 35000,
+      stage: 'Growth',
+      fundingRound: 'Seed',
+      fundingRaised: 1.8,
+      traction: '50,000 active users, 92% user satisfaction rate',
+      positions: [
+        {
+          title: 'Full Stack Developer',
+          description: 'Build and maintain our web and mobile applications.',
+          requirements: {
+            create: {
+              skills: ['React Native', 'Node.js', 'MongoDB', 'TypeScript'],
+              experience: 3,
+              education: 'BS in Computer Science or equivalent',
+            },
+          },
+        },
+      ],
+    },
+    {
+      name: 'AgriTech Solutions',
+      description: 'Empowering farmers with data-driven agriculture solutions.',
+      logo: null,
+      foundedYear: 2023,
+      teamSize: 15,
+      domain: ['AgTech', 'IoT', 'AI/ML'],
+      website: 'https://agritech.example.com',
+      problemStatement: 'Small-scale farmers lack access to modern agricultural technology and data-driven insights.',
+      solution: 'Affordable IoT sensors and AI platform providing crop monitoring, weather predictions, and farming recommendations.',
+      techStack: ['Python', 'TensorFlow', 'React', 'Node.js', 'AWS IoT'],
+      tam: 125000, // $125B
+      sam: 6000,   // $6B
+      competitors: 4,
+      mrr: 200000,
+      stage: 'Scale',
+      fundingRound: 'Series A',
+      fundingRaised: 15.0,
+      traction: '10,000+ farmers, 40% increase in crop yields',
+      positions: [
+        {
+          title: 'Data Scientist',
+          description: 'Develop and improve our agricultural prediction models.',
+          requirements: {
+            create: {
+              skills: ['Python', 'Machine Learning', 'Agricultural Data Analysis'],
+              experience: 4,
+              education: 'MS/PhD in Data Science or Agricultural Engineering',
+            },
+          },
+        },
+      ],
+    },
+  ];
 
-  console.log('Seeding completed successfully!');
+  for (const startup of startups) {
+    await prisma.startup.create({
+      data: {
+        ...startup,
+        positions: {
+          create: startup.positions.map((position: any) => ({
+            ...position,
+          })),
+        },
+      },
+    });
+  }
+
+  console.log('Seed data inserted successfully!');
 }
 
 main()
-  .catch((e) => {
+  .catch((e: Error) => {
     console.error(e);
     process.exit(1);
   })

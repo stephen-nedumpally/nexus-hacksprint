@@ -9,20 +9,21 @@ generator client {
 }
 
 model User {
-  id          String   @id @default(cuid())
-  name        String
-  email       String   @unique
-  verified    Boolean  @default(false)
-  image       String?
+  id             String    @id @default(cuid())
+  name           String?
+  email          String?   @unique
+  emailVerified  DateTime?
+  image          String?
+  role           String    @default("student")
+  skills         String[]
+  interests      String[]
   accounts      Account[]
   sessions      Session[]
+  verified      Boolean   @default(false)
   skillTests    SkillTest[]
+  startupApplications StartupApplication[]
   studyGroups   StudyGroupMember[]
   applications  Application[]
-  startups      Startup[]
-  reactions     StartupReaction[]
-  comments      StartupComment[]
-  startupApplications StartupApplication[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -70,41 +71,24 @@ model Startup {
   description String
   logo        String?
   foundedYear Int
-  teamSize    Int     @default(1)
+  teamSize    Int
   domain      String[]
   website     String?
+  problemStatement String
+  solution    String
+  techStack   String[]
+  tam         Float    // Total Addressable Market in millions
+  sam         Float    // Serviceable Addressable Market in millions
+  competitors Int
+  mrr         Float?   // Monthly Recurring Revenue
+  stage       String   // e.g., "Idea", "MVP", "Growth", "Scale"
+  fundingRound String? // e.g., "Pre-seed", "Seed", "Series A"
+  fundingRaised Float? // Total funding raised in millions
+  traction    String?  // Key metrics and growth numbers
   positions   Position[]
-  createdBy   User     @relation(fields: [userId], references: [id])
-  userId      String
-  likes       StartupReaction[]
-  comments    StartupComment[]
   applications StartupApplication[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-}
-
-model StartupReaction {
-  id        String   @id @default(cuid())
-  startup   Startup  @relation(fields: [startupId], references: [id])
-  startupId String
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String
-  type      String   // 'like' or 'dislike'
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([startupId, userId])
-}
-
-model StartupComment {
-  id        String   @id @default(cuid())
-  startup   Startup  @relation(fields: [startupId], references: [id])
-  startupId String
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String
-  content   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model StartupApplication {

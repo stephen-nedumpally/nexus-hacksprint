@@ -5,19 +5,10 @@ import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import { AuthCheckModal, useAuthCheck } from '@/components/auth/AuthCheckModal';
-
-interface Startup {
-  id: string;
-  name: string;
-  description: string;
-  roles: string[];
-  requirements: {
-    experience: string;
-    skills: string[];
-  };
-}
+import { Startup } from '@/types/startup';
 
 export function StartupList() {
   const { data: session } = useSession();
@@ -93,22 +84,41 @@ export function StartupList() {
             </CardHeader>
             <CardContent className="flex-1">
               <div className="space-y-4">
+                {/* Quick Stats */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Stage</p>
+                    <p className="font-medium">{startup.stage}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Team Size</p>
+                    <p className="font-medium">{startup.teamSize} members</p>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Tech Stack */}
                 <div>
-                  <h4 className="text-sm font-medium mb-2">Open Roles</h4>
+                  <h4 className="text-sm font-medium mb-2">Tech Stack</h4>
                   <div className="flex flex-wrap gap-2">
-                    {startup.roles.map((role) => (
-                      <Badge key={role} variant="secondary">
-                        {role}
+                    {startup.techStack.map((tech) => (
+                      <Badge key={tech} variant="secondary">
+                        {tech}
                       </Badge>
                     ))}
                   </div>
                 </div>
+
+                <Separator />
+
+                {/* Open Positions */}
                 <div>
-                  <h4 className="text-sm font-medium mb-2">Required Skills</h4>
+                  <h4 className="text-sm font-medium mb-2">Open Positions</h4>
                   <div className="flex flex-wrap gap-2">
-                    {startup.requirements.skills.map((skill) => (
-                      <Badge key={skill} variant="outline">
-                        {skill}
+                    {startup.positions.map((position) => (
+                      <Badge key={position.title} variant="outline">
+                        {position.title}
                       </Badge>
                     ))}
                   </div>
@@ -116,12 +126,14 @@ export function StartupList() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button 
+              <Link 
+                href={`/startups/${startup.id}`}
                 className="w-full"
-                onClick={() => handleViewDetails(startup.id)}
               >
-                View Details
-              </Button>
+                <Button className="w-full">
+                  View Details
+                </Button>
+              </Link>
             </CardFooter>
           </Card>
         ))}

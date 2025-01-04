@@ -1,121 +1,172 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Plus } from 'lucide-react';
+import Image from "next/image";
+import Link from "next/link";
 import { useQuery } from '@tanstack/react-query';
 import { fetchStartups } from '@/lib/api/startups';
-import { StartupCard } from '@/components/startups/startup-card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { CreateStartupForm } from '@/components/startups/create-startup-form';
+import { ViewOpportunitiesDialog } from '@/components/startups/view-opportunities-dialog';
+import type { Startup } from '@/types/startup';
+import { useSession } from 'next-auth/react';
 
 export default function StartupsPage() {
-  const { data: session } = useSession();
-  const router = useRouter();
+  const { data: session, status } = useSession();
+  const [selectedStartup, setSelectedStartup] = useState<Startup | null>(null);
+  const [hasStartup, setHasStartup] = useState(false);
+  const [startups, setStartups] = useState<Startup[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const { data: startups, isLoading } = useQuery({
-    queryKey: ['startups'],
-    queryFn: fetchStartups,
-  });
+  useEffect(() => {
+    const fetchStartupsData = async () => {
+      try {
+        const data = await fetchStartups();
+        setStartups(data);
+      } catch (error) {
+        console.error('Error fetching startups:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleCreateStartup = () => {
-    if (!session?.user) {
-      router.push('/auth/signin?callbackUrl=/startups/create');
-      return;
-    }
+    const checkStartupExistence = async () => {
+      if (status === 'authenticated') {
+        try {
+          const response = await fetch('/api/startups/my/exists');
+          const data = await response.json();
+          setHasStartup(data);
+        } catch (error) {
+          console.error('Error checking startup existence:', error);
+        }
+      }
+    };
 
-    if (!session.user.verified) {
-      router.push('/verify?callbackUrl=/startups/create');
-      return;
-    }
+    fetchStartupsData();
+    checkStartupExistence();
+  }, [status]);
 
-    router.push('/startups/create');
-  };
-
-  const handleViewMyStartup = () => {
-    if (!session?.user) {
-      router.push('/auth/signin?callbackUrl=/my-startup');
-      return;
-    }
-
-    if (!session.user.verified) {
-      router.push('/verify?callbackUrl=/my-startup');
-      return;
-    }
-
-    router.push('/my-startup');
-  };
-
-  const userHasStartup = startups?.some(
-    (startup) => startup.userId === session?.user?.id
-  );
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-lime-400"></div>
+      </div>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-black py-24">
       <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-center mb-12">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Startups</h1>
-            <p className="text-gray-400">
-              Discover innovative startups or create your own
+            <h1 className="text-4xl font-bold text-white mb-4">Startup Opportunities</h1>
+            <p className="text-gray-400 max-w-2xl">
+              Discover innovative startups and projects that are shaping the future. Join them in their journey and be part of something extraordinary.
             </p>
           </div>
-          {session?.user && !session.user.verified && (
-            <Alert variant="warning" className="max-w-md">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Complete verification to create or apply to startups.{' '}
-                <Button
-                  variant="link"
-                  className="text-lime-400 p-0 h-auto"
-                  onClick={() => router.push('/verify')}
-                >
-                  Verify now
-                </Button>
-              </AlertDescription>
-            </Alert>
+          
+          {hasStartup ? (
+            <Link href="/startups/my">
+              <Button className="bg-lime-400 text-black hover:bg-lime-400/90">
+                View My Startup
+              </Button>
+            </Link>
+          ) : (
+            <Link href="/startups/create">
+              <Button className="bg-lime-400 text-black hover:bg-lime-400/90">
+                <Plus className="mr-2 h-4 w-4" />
+                Create Startup
+              </Button>
+            </Link>
           )}
-          <Button
-            onClick={userHasStartup ? handleViewMyStartup : handleCreateStartup}
-            className="bg-lime-400 text-black hover:bg-lime-400/90"
-          >
-            {userHasStartup ? 'View My Startup' : 'Create Startup'}
-          </Button>
         </div>
 
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <Card
-                key={i}
-                className="h-64 animate-pulse bg-white/5 border-white/10"
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {startups?.map((startup) => (
-              <StartupCard
-                key={startup.id}
-                startup={startup}
-                requiresVerification={!session?.user?.verified}
-                onApply={() => {
-                  if (!session?.user) {
-                    router.push('/auth/signin?callbackUrl=/startups');
-                    return;
-                  }
-                  if (!session.user.verified) {
-                    router.push('/verify?callbackUrl=/startups');
-                    return;
-                  }
-                  // Handle apply logic
-                }}
-              />
-            ))}
-          </div>
-        )}
+        <div className="grid md:grid-cols-3 gap-8">
+          {startups?.map((startup: Startup) => (
+            <Card 
+              key={startup.id} 
+              className="group relative overflow-hidden border border-white/10 bg-black/50 backdrop-blur-sm hover:border-lime-400/50 transition-all duration-300"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-lime-400/10 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+              <div className="relative p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center space-x-4">
+                    <div className="h-12 w-12 rounded-full bg-lime-400/10 flex items-center justify-center">
+                      {startup.logo ? (
+                        <Image
+                          src={startup.logo}
+                          alt={startup.name}
+                          width={32}
+                          height={32}
+                          className="rounded-full"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-lime-400/20 flex items-center justify-center text-lime-400 font-semibold">
+                          {startup.name[0]}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">{startup.name}</h3>
+                      <p className="text-sm text-gray-400">{startup.domain.join(' • ')}</p>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="border-lime-400/50 text-lime-400">
+                    {startup.positions.length > 0 ? 'Hiring' : 'Coming Soon'}
+                  </Badge>
+                </div>
+                <p className="text-gray-400 mb-6">
+                  {startup.description}
+                </p>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-400">Open Positions</span>
+                    <span className="text-white font-medium">{startup.positions.length}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-400">Team Size</span>
+                    <span className="text-white font-medium">{startup.teamSize}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-400">Founded</span>
+                    <span className="text-white font-medium">{startup.foundedYear}</span>
+                  </div>
+                </div>
+                <div className="flex gap-3 mt-6">
+                  <Link 
+                    href={`/startups/${startup.id}`}
+                    className="flex-1"
+                  >
+                    <Button 
+                      className="w-full bg-black text-lime-400 border border-lime-400 hover:bg-lime-400/10"
+                      variant="outline"
+                    >
+                      View Details
+                    </Button>
+                  </Link>
+                  <Button 
+                    className="flex-1 bg-lime-400 text-black hover:bg-lime-400/90"
+                    onClick={() => setSelectedStartup(startup)}
+                  >
+                    View Opportunities
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
       </div>
+
+      {selectedStartup && (
+        <ViewOpportunitiesDialog
+          startup={selectedStartup}
+          open={!!selectedStartup}
+          onOpenChange={() => setSelectedStartup(null)}
+        />
+      )}
     </main>
   );
 }

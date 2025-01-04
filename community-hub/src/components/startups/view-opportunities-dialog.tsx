@@ -1,124 +1,127 @@
 'use client';
 
 import { useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
-import { Briefcase, GraduationCap, Code } from 'lucide-react';
-import type { Startup } from '@/types/startup';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Startup } from '@/types/startup';
 
 interface ViewOpportunitiesDialogProps {
   startup: Startup;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  requiresVerification?: boolean;
-  onApply: () => void;
+  selectedPositionId?: string;
 }
 
-export function ViewOpportunitiesDialog({
-  startup,
-  open,
+export function ViewOpportunitiesDialog({ 
+  startup, 
+  open, 
   onOpenChange,
-  requiresVerification,
-  onApply,
+  selectedPositionId 
 }: ViewOpportunitiesDialogProps) {
-  const [applying, setApplying] = useState(false);
-  const { toast } = useToast();
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [selectedTab, setSelectedTab] = useState(
+    selectedPositionId 
+      ? startup.positions.findIndex(p => p.id === selectedPositionId).toString()
+      : "0"
+  );
 
-  async function handleApply(positionId) {
-    try {
-      setApplying(true);
-      await applyToPosition(positionId);
-      toast({
-        title: 'Application Submitted',
-        description: 'Your application has been submitted successfully!',
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to submit application. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setApplying(false);
+  const handleApply = async (positionId: string) => {
+    if (status === 'unauthenticated') {
+      onOpenChange(false); // Close the dialog
+      router.push(`/auth/signin?callbackUrl=/startups/${startup.id}`);
+      return;
     }
-  }
+
+    try {
+      const response = await fetch('/api/applications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          startupId: startup.id,
+          positionId,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to apply');
+      }
+
+      // Close dialog after successful application
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error applying:', error);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] bg-black border border-white/10">
+      <DialogContent className="max-w-4xl">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-white">
-            Opportunities at {startup.name}
-          </DialogTitle>
+          <DialogTitle>Open Positions at {startup.name}</DialogTitle>
         </DialogHeader>
 
-        {requiresVerification && (
-          <Alert variant="warning" className="mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Complete verification to apply for positions
-            </AlertDescription>
-          </Alert>
-        )}
+        <Tabs value={selectedTab} onValueChange={setSelectedTab}>
+          <TabsList className="grid grid-cols-2 lg:grid-cols-3 mb-4">
+            {startup.positions.map((position, index) => (
+              <TabsTrigger key={position.id} value={index.toString()}>
+                {position.title}
+              </TabsTrigger>
+            ))}
+          </TabsList>
 
-        <div className="space-y-4">
-          {startup.positions.map((position) => (
-            <Card
-              key={position.id}
-              className="p-4 border border-white/10 bg-white/5"
-            >
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <h3 className="text-lg font-semibold text-white">
-                    {position.title}
-                  </h3>
-                  <p className="text-sm text-gray-400">
-                    {position.requirements?.experience} years experience
-                  </p>
-                </div>
-                <Badge variant="outline" className="border-lime-400/50 text-lime-400">
-                  {position.applications?.length || 0} applicants
-                </Badge>
-              </div>
-
-              <p className="text-gray-400 mb-4">{position.description}</p>
-
-              {position.requirements && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-white">Requirements</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {position.requirements.skills.map((skill) => (
-                      <Badge
-                        key={skill}
-                        variant="outline"
-                        className="bg-white/5 text-white"
-                      >
-                        {skill}
-                      </Badge>
-                    ))}
+          {startup.positions.map((position, index) => (
+            <TabsContent key={position.id} value={index.toString()}>
+              <Card>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle>{position.title}</CardTitle>
+                      <p className="text-muted-foreground mt-2">{position.description}</p>
+                    </div>
+                    <Button 
+                      className="bg-lime-400 text-black hover:bg-lime-400/90"
+                      onClick={() => handleApply(position.id)}
+                    >
+                      {status === 'unauthenticated' ? 'Sign in to Apply' : 'Apply Now'}
+                    </Button>
                   </div>
-                  {position.requirements.education && (
-                    <p className="text-sm text-gray-400">
-                      Education: {position.requirements.education}
-                    </p>
-                  )}
-                </div>
-              )}
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">Required Skills</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {position.requirements.skills.map((skill) => (
+                        <Badge key={skill} variant="outline">
+                          {skill}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
 
-              <Button
-                onClick={() => handleApply(position.id)}
-                className="w-full mt-4 bg-lime-400 text-black hover:bg-lime-400/90"
-                disabled={requiresVerification || applying}
-              >
-                Apply Now
-              </Button>
-            </Card>
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">Experience</h4>
+                    <p>{position.requirements.experience} years</p>
+                  </div>
+
+                  {position.requirements.education && (
+                    <div>
+                      <h4 className="text-sm font-medium mb-2">Education</h4>
+                      <p>{position.requirements.education}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
           ))}
-        </div>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
