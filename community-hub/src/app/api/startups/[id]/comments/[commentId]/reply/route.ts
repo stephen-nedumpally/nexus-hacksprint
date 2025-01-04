@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string; commentId: string } }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -13,41 +13,26 @@ export async function POST(
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
+    const body = await request.json();
+    const { content } = body;
+
+    if (!content?.trim()) {
+      return new NextResponse('Reply content is required', { status: 400 });
+    }
+
     const startupId = params.id;
+    const commentId = params.commentId;
     const userId = session.user.id;
 
-    // Check if user has already liked
-    const existingLike = await prisma.like.findFirst({
-      where: {
+    // Create new reply
+    await prisma.comment.create({
+      data: {
+        content,
         startupId,
         userId,
+        parentId: commentId,
       },
     });
-
-    if (existingLike) {
-      // Remove like if it exists
-      await prisma.like.delete({
-        where: {
-          id: existingLike.id,
-        },
-      });
-    } else {
-      // Remove dislike if it exists
-      await prisma.dislike.deleteMany({
-        where: {
-          startupId,
-          userId,
-        },
-      });
-
-      // Add new like
-      await prisma.like.create({
-        data: {
-          startupId,
-          userId,
-        },
-      });
-    }
 
     // Get updated startup with counts
     const updatedStartup = await prisma.startup.findUnique({
@@ -75,7 +60,7 @@ export async function POST(
 
     return NextResponse.json(updatedStartup);
   } catch (error) {
-    console.error('[STARTUP_LIKE]', error);
+    console.error('[STARTUP_REPLY]', error);
     return new NextResponse('Internal error', { status: 500 });
   }
 }

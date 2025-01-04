@@ -13,41 +13,24 @@ export async function POST(
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
+    const body = await request.json();
+    const { content } = body;
+
+    if (!content?.trim()) {
+      return new NextResponse('Comment content is required', { status: 400 });
+    }
+
     const startupId = params.id;
     const userId = session.user.id;
 
-    // Check if user has already liked
-    const existingLike = await prisma.like.findFirst({
-      where: {
+    // Create new comment
+    await prisma.comment.create({
+      data: {
+        content,
         startupId,
         userId,
       },
     });
-
-    if (existingLike) {
-      // Remove like if it exists
-      await prisma.like.delete({
-        where: {
-          id: existingLike.id,
-        },
-      });
-    } else {
-      // Remove dislike if it exists
-      await prisma.dislike.deleteMany({
-        where: {
-          startupId,
-          userId,
-        },
-      });
-
-      // Add new like
-      await prisma.like.create({
-        data: {
-          startupId,
-          userId,
-        },
-      });
-    }
 
     // Get updated startup with counts
     const updatedStartup = await prisma.startup.findUnique({
@@ -75,7 +58,7 @@ export async function POST(
 
     return NextResponse.json(updatedStartup);
   } catch (error) {
-    console.error('[STARTUP_LIKE]', error);
+    console.error('[STARTUP_COMMENT]', error);
     return new NextResponse('Internal error', { status: 500 });
   }
 }

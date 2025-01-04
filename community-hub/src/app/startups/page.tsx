@@ -12,7 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchStartups } from '@/lib/api/startups';
 import { CreateStartupForm } from '@/components/startups/create-startup-form';
 import { ViewOpportunitiesDialog } from '@/components/startups/view-opportunities-dialog';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatNumber } from '@/lib/utils';
 import type { Startup } from '@/types/startup';
 
 export default function StartupsPage() {
@@ -100,18 +100,19 @@ export default function StartupsPage() {
                     <span className="text-white font-medium">{formatDate(startup.founded)}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-400">Interactions</span>
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-1">
-                        <ThumbsUp className="h-4 w-4 text-gray-400" />
-                        <span className="text-white font-medium">{startup.likes?.length}</span>
+                        <ThumbsUp className="h-4 w-4 text-lime-400" />
+                        <span className="text-white font-medium">{formatNumber(startup.likes?.length)}</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <ThumbsDown className="h-4 w-4 text-gray-400" />
-                        <span className="text-white font-medium">{startup.dislikes?.length}</span>
+                        <ThumbsDown className="h-4 w-4 text-red-400" />
+                        <span className="text-white font-medium">{formatNumber(startup.dislikes?.length)}</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <MessageSquare className="h-4 w-4 text-gray-400" />
-                        <span className="text-white font-medium">{startup.comments?.length}</span>
+                        <MessageSquare className="h-4 w-4 text-blue-400" />
+                        <span className="text-white font-medium">{formatNumber(startup.comments?.length)}</span>
                       </div>
                     </div>
                   </div>

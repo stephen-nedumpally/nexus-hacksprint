@@ -1,44 +1,81 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { prisma } from '@/lib/prisma';
 import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(
-  req: NextRequest,
+  request: Request,
   { params }: { params: { id: string } }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return new NextResponse('Unauthorized', { status: 401 });
-  }
-
   try {
-    // Remove any existing like
-    await prisma.like.deleteMany({
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
+
+    const startupId = params.id;
+    const userId = session.user.id;
+
+    // Check if user has already disliked
+    const existingDislike = await prisma.dislike.findFirst({
       where: {
-        startupId: params.id,
-        userId: session.user.id,
+        startupId,
+        userId,
       },
     });
 
-    // Add dislike if it doesn't exist
-    const dislike = await prisma.dislike.upsert({
+    if (existingDislike) {
+      // Remove dislike if it exists
+      await prisma.dislike.delete({
+        where: {
+          id: existingDislike.id,
+        },
+      });
+    } else {
+      // Remove like if it exists
+      await prisma.like.deleteMany({
+        where: {
+          startupId,
+          userId,
+        },
+      });
+
+      // Add new dislike
+      await prisma.dislike.create({
+        data: {
+          startupId,
+          userId,
+        },
+      });
+    }
+
+    // Get updated startup with counts
+    const updatedStartup = await prisma.startup.findUnique({
       where: {
-        startupId_userId: {
-          startupId: params.id,
-          userId: session.user.id,
+        id: startupId,
+      },
+      include: {
+        likes: true,
+        dislikes: true,
+        comments: {
+          include: {
+            user: true,
+            replies: {
+              include: {
+                user: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
         },
       },
-      create: {
-        startupId: params.id,
-        userId: session.user.id,
-      },
-      update: {},
     });
 
-    return NextResponse.json(dislike);
+    return NextResponse.json(updatedStartup);
   } catch (error) {
-    console.error('Error disliking startup:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    console.error('[STARTUP_DISLIKE]', error);
+    return new NextResponse('Internal error', { status: 500 });
   }
 }

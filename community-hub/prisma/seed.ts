@@ -166,7 +166,6 @@ async function main() {
   ]);
 
   // Create positions for each startup
-  const positions = [];
   for (let i = 0; i < startups.length; i++) {
     const startup = startups[i];
     const positionsData = [
@@ -196,101 +195,67 @@ async function main() {
       },
     ];
     
-    const createdPositions = await Promise.all(
+    await Promise.all(
       positionsData.map(position => prisma.position.create({ data: position }))
     );
-    positions.push(...createdPositions);
   }
 
-  // Add interactions (likes, dislikes, comments)
-  for (let i = 0; i < startups.length; i++) {
-    const startup = startups[i];
-    // Each startup gets 2-3 likes from random users
-    const likeUsers = users
-      .filter(user => user.id !== startup.userId)
-      .sort(() => Math.random() - 0.5)
-      .slice(0, Math.floor(Math.random() * 2) + 2);
-
+  // Create likes, dislikes, and comments
+  for (const startup of startups) {
+    // Create likes
     await Promise.all(
-      likeUsers.map(user =>
+      users.slice(0, 3).map(user =>
         prisma.like.create({
           data: {
-            startupId: startup.id,
             userId: user.id,
+            startupId: startup.id,
           },
         })
       )
     );
 
-    // Each startup gets 1-2 dislikes from random users
-    const dislikeUsers = users
-      .filter(user => user.id !== startup.userId && !likeUsers.find(u => u.id === user.id))
-      .sort(() => Math.random() - 0.5)
-      .slice(0, Math.floor(Math.random() * 2) + 1);
-
+    // Create dislikes
     await Promise.all(
-      dislikeUsers.map(user =>
+      users.slice(3, 4).map(user =>
         prisma.dislike.create({
           data: {
-            startupId: startup.id,
             userId: user.id,
+            startupId: startup.id,
           },
         })
       )
     );
 
-    // Add 2-3 comments for each startup
-    const commentUsers = users
-      .filter(user => user.id !== startup.userId)
-      .sort(() => Math.random() - 0.5)
-      .slice(0, Math.floor(Math.random() * 2) + 2);
-
-    const comments = [
-      'Really innovative solution! Looking forward to seeing more.',
-      'How do you handle scalability challenges?',
-      'Great team and execution!',
-      'Interesting approach to solving this problem.',
-      'Have you considered expanding to other markets?',
-      'Impressive traction so far!',
-      'What\'s your go-to-market strategy?',
-      'The technology stack looks solid.',
-      'Would love to learn more about your roadmap.',
-    ];
-
-    await Promise.all(
-      commentUsers.map(user =>
+    // Create comments with replies
+    const comments = await Promise.all(
+      users.slice(0, 2).map(user =>
         prisma.comment.create({
           data: {
-            content: comments[Math.floor(Math.random() * comments.length)],
+            content: `Great startup! I love the ${startup.domain[0]} focus.`,
+            userId: user.id,
             startupId: startup.id,
-            userId: user.id,
+            createdAt: new Date(),
           },
         })
       )
     );
-  }
 
-  // Add applications
-  const applicationStatuses = ['PENDING', 'ACCEPTED', 'REJECTED'];
-  for (const user of users) {
-    // Each user applies to 1-2 random positions
-    const randomPositions = positions
-      .filter(position => position.startupId !== startups.find(s => s.userId === user.id)?.id)
-      .sort(() => Math.random() - 0.5)
-      .slice(0, Math.floor(Math.random() * 2) + 1);
-
-    await Promise.all(
-      randomPositions.map(position =>
-        prisma.application.create({
-          data: {
-            startupId: position.startupId,
-            positionId: position.id,
-            userId: user.id,
-            status: applicationStatuses[Math.floor(Math.random() * applicationStatuses.length)],
-          },
-        })
-      )
-    );
+    // Add replies to comments
+    for (const comment of comments) {
+      await Promise.all(
+        users.slice(2, 4).map(user =>
+          prisma.comment.create({
+            data: {
+              content: `I agree! The ${startup.solution} is innovative.`,
+              userId: user.id,
+              startupId: startup.id,
+              parentId: comment.id,
+              createdAt: new Date(),
+            },
+          })
+        )
+      );
+    }
   }
 
   console.log('Seed data created successfully!');

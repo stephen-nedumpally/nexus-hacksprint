@@ -43,6 +43,10 @@ model User {
   email         String?   @unique
   emailVerified DateTime?
   image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
   accounts      Account[]
   sessions      Session[]
   startups      Startup[]
@@ -50,8 +54,6 @@ model User {
   dislikes      Dislike[]
   comments      Comment[]
   applications  Application[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
 }
 
 model VerificationToken {
@@ -65,8 +67,6 @@ model VerificationToken {
 model Startup {
   id          String   @id @default(cuid())
   name        String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
   description String
   domain      String[]
   website     String?
@@ -77,9 +77,11 @@ model Startup {
   funding     String
   teamSize    Int      @default(1)
   founded     DateTime @default(now())
-  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Relations
+  userId       String
   user         User          @relation(fields: [userId], references: [id])
   positions    Position[]
   likes        Like[]
@@ -111,6 +113,8 @@ model Requirements {
   education   String?
   positionId  String   @unique
   position    Position @relation(fields: [positionId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Application {
@@ -121,6 +125,7 @@ model Application {
   status     String   @default("PENDING") // PENDING, ACCEPTED, REJECTED
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
   startup    Startup  @relation(fields: [startupId], references: [id])
   position   Position @relation(fields: [positionId], references: [id])
   user       User     @relation(fields: [userId], references: [id])
@@ -136,6 +141,8 @@ model Like {
   startupId String
   userId    String
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   startup   Startup  @relation(fields: [startupId], references: [id])
   user      User     @relation(fields: [userId], references: [id])
 
@@ -149,6 +156,8 @@ model Dislike {
   startupId String
   userId    String
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   startup   Startup  @relation(fields: [startupId], references: [id])
   user      User     @relation(fields: [userId], references: [id])
 
@@ -164,8 +173,14 @@ model Comment {
   userId    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
   startup   Startup  @relation(fields: [startupId], references: [id])
   user      User     @relation(fields: [userId], references: [id])
+
+  // Self-relation for replies
+  parentId  String?
+  parent    Comment?  @relation("Replies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("Replies")
 
   @@index([startupId])
   @@index([userId])
