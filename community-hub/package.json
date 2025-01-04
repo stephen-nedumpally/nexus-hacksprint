@@ -10,7 +10,7 @@
     "db:seed": "ts-node -O {\\\"module\\\":\\\"CommonJS\\\"} prisma/seed.ts"
   },
   "prisma": {
-    "seed": "ts-node -O {\\\"module\\\":\\\"CommonJS\\\"} prisma/seed.ts"
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

@@ -9,19 +9,20 @@ generator client {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
+  verified    Boolean  @default(false)
+  image       String?
   accounts      Account[]
   sessions      Session[]
-  verified      Boolean   @default(false)
   skillTests    SkillTest[]
-  startupApplications StartupApplication[]
   studyGroups   StudyGroupMember[]
   applications  Application[]
   startups      Startup[]
+  reactions     StartupReaction[]
+  comments      StartupComment[]
+  startupApplications StartupApplication[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -77,6 +78,7 @@ model Startup {
   userId      String
   likes       StartupReaction[]
   comments    StartupComment[]
+  applications StartupApplication[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
