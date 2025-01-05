@@ -1,121 +1,95 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { prisma } from "@/lib/prisma";
-import { authOptions } from "@/lib/auth";
+import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { prisma } from '@/lib/prisma';
+import { authOptions } from '../auth/[...nextauth]/route';
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return new NextResponse("Unauthorized", { status: 401 });
+
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const profile = await prisma.profile.findUnique({
-      where: {
-        userId: session.user.id,
-      },
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
       include: {
-        projects: true,
-        organization: true,
-        department: true,
-        enrollments: {
+        profile: {
           include: {
-            course: {
-              include: {
-                _count: {
-                  select: {
-                    enrollments: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
+            courses: true
+          }
+        }
+      }
     });
 
-    // Transform the data to make it easier to work with in the frontend
-    const transformedProfile = profile
-      ? {
-          ...profile,
-          courses: profile.enrollments.map((enrollment) => enrollment.course),
-          enrollments: undefined,
-        }
-      : { userId: session.user.id };
+    if (!user || !user.profile) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
 
-    return NextResponse.json(transformedProfile);
+    return NextResponse.json({ profile: user.profile });
   } catch (error) {
-    console.error("Error fetching profile:", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    console.error('Error fetching profile:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch profile' },
+      { status: 500 }
+    );
   }
 }
 
 export async function PUT(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return new NextResponse("Unauthorized", { status: 401 });
+
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const data = await request.json();
-    const { projects, ...profileData } = data;
 
-    // First, find the existing profile
-    const existingProfile = await prisma.profile.findUnique({
-      where: {
-        userId: session.user.id,
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      include: { profile: true }
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const updatedProfile = await prisma.profile.upsert({
+      where: { userId: user.id },
+      create: {
+        userId: user.id,
+        bio: data.bio || "Hello! I'm new here.",
+        avatar: data.avatar || user.image || "",
+        courses: {
+          create: [
+            {
+              name: "Introduction to Programming",
+              description: "Learn the basics of programming",
+              progress: 0
+            },
+            {
+              name: "Web Development Fundamentals",
+              description: "Master HTML, CSS, and JavaScript",
+              progress: 0
+            }
+          ]
+        }
       },
+      update: {
+        bio: data.bio,
+        avatar: data.avatar,
+      },
+      include: {
+        courses: true
+      }
     });
 
-    // Use transaction to ensure data consistency
-    const profile = await prisma.$transaction(async (tx) => {
-      // Create or update the profile
-      const updatedProfile = await tx.profile.upsert({
-        where: {
-          userId: session.user.id,
-        },
-        create: {
-          userId: session.user.id,
-          ...profileData,
-        },
-        update: profileData,
-      });
-
-      // If there are existing projects, delete them
-      if (existingProfile) {
-        await tx.project.deleteMany({
-          where: {
-            profileId: existingProfile.id,
-          },
-        });
-      }
-
-      // Create new projects if any
-      if (projects?.length > 0) {
-        await tx.project.createMany({
-          data: projects.map((project: any) => ({
-            ...project,
-            profileId: updatedProfile.id,
-          })),
-        });
-      }
-
-      // Return the complete profile with projects
-      return tx.profile.findUnique({
-        where: {
-          id: updatedProfile.id,
-        },
-        include: {
-          projects: true,
-        },
-      });
-    });
-
-    return NextResponse.json(profile);
-  } catch (error: any) {
-    console.error("Error updating profile:", error.message);
-    return new NextResponse(
-      error.message || "Internal Server Error", 
+    return NextResponse.json({ profile: updatedProfile });
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    return NextResponse.json(
+      { error: 'Failed to update profile' },
       { status: 500 }
     );
   }

@@ -93,22 +93,30 @@ export default function StartupsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-black py-24">
-      <div className="container mx-auto px-4">
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Startups</h1>
-            <p className="text-muted-foreground">
-              Browse and connect with innovative startups
-            </p>
-          </div>
-          <Link href="/startups/create">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Startup
-            </Button>
-          </Link>
-        </div>
+<main className="min-h-screen bg-black py-24">
+  <div className="container mx-auto px-4">
+    <div className="mb-8 flex items-center justify-between">
+      <div>
+        <h1 className="text-3xl font-bold mb-2">Startups</h1>
+        <p className="text-muted-foreground">
+          Browse and connect with innovative startups
+        </p>
+      </div>
+      <div className="flex gap-4"> {/* Added this wrapper div with flex and gap-4 */}
+        <Link href="/startups/create">
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Startup
+          </Button>
+        </Link>
+        <Link href="/startups/create/referrals/">
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Referral
+          </Button>
+        </Link>
+      </div>
+    </div>
 
         <div className="grid md:grid-cols-3 gap-8">
           {startups.map((startup: Startup) => (

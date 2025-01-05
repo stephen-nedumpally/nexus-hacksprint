@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useSession } from "next-auth/react";
-import toast from "@/components/ui/toast";
+import { useToast } from "@/components/ui/use-toast";
 import Link from "next/link";
 
 type Course = {
@@ -51,6 +51,7 @@ export function CourseForums() {
   const [userProfile, setUserProfile] = useState<any>(null);
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [isEditing, setIsEditing] = useState(false);
+  const toast = useToast();
 
   // Fetch organizations and user profile
   useEffect(() => {
