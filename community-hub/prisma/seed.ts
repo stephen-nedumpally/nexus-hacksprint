@@ -18,7 +18,7 @@ async function main() {
       data: {
         name: 'John Doe',
         email: 'john@example.com',
-        emailVerified: new Date(),
+        verified: true,
         image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John',
       },
     }),
@@ -26,7 +26,7 @@ async function main() {
       data: {
         name: 'Jane Smith',
         email: 'jane@example.com',
-        emailVerified: new Date(),
+        verified: true,
         image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jane',
       },
     }),
@@ -34,7 +34,7 @@ async function main() {
       data: {
         name: 'Bob Wilson',
         email: 'bob@example.com',
-        emailVerified: new Date(),
+        verified: true,
         image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bob',
       },
     }),
@@ -42,7 +42,7 @@ async function main() {
       data: {
         name: 'Alice Chen',
         email: 'alice@example.com',
-        emailVerified: new Date(),
+        verified: true,
         image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alice',
       },
     }),
@@ -50,7 +50,7 @@ async function main() {
       data: {
         name: 'David Kumar',
         email: 'david@example.com',
-        emailVerified: new Date(),
+        verified: true,
         image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=David',
       },
     }),
@@ -58,7 +58,7 @@ async function main() {
       data: {
         name: 'Sarah Johnson',
         email: 'sarah@example.com',
-        emailVerified: new Date(),
+        verified: true,
         image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah',
       },
     }),
@@ -437,6 +437,277 @@ async function main() {
 
   // Execute all interactions
   await Promise.all(interactions);
+
+  // Create organizations (IITs) and their departments/courses
+  console.log('Seeding organizations and courses...');
+
+  // 1. IIT Madras
+  const iitm = await prisma.organization.create({
+    data: {
+      name: 'IIT Madras',
+      code: 'IITM',
+      departments: {
+        create: {
+          name: 'BSc Data Science and Programming',
+          code: 'BSC-DS',
+          courses: {
+            create: [
+              // Foundation Level
+              {
+                name: 'Mathematics for Data Science 1',
+                code: 'MDS1',
+                level: 'FOUNDATION',
+                whatsappLink: 'https://chat.whatsapp.com/mds1',
+                discordLink: 'https://discord.gg/mds1',
+              },
+              {
+                name: 'Statistics for Data Science 1',
+                code: 'SDS1',
+                level: 'FOUNDATION',
+                whatsappLink: 'https://chat.whatsapp.com/sds1',
+                discordLink: 'https://discord.gg/sds1',
+              },
+              {
+                name: 'Python for Data Science',
+                code: 'PDS',
+                level: 'FOUNDATION',
+                whatsappLink: 'https://chat.whatsapp.com/pds',
+                discordLink: 'https://discord.gg/pds',
+              },
+              {
+                name: 'Computational Thinking',
+                code: 'CT',
+                level: 'FOUNDATION',
+                whatsappLink: 'https://chat.whatsapp.com/ct',
+                discordLink: 'https://discord.gg/ct',
+              },
+
+              // Diploma Level
+              {
+                name: 'Machine Learning Foundations',
+                code: 'MLF',
+                level: 'DIPLOMA',
+                whatsappLink: 'https://chat.whatsapp.com/mlf',
+                discordLink: 'https://discord.gg/mlf',
+              },
+              {
+                name: 'Machine Learning Techniques',
+                code: 'MLT',
+                level: 'DIPLOMA',
+                whatsappLink: 'https://chat.whatsapp.com/mlt',
+                discordLink: 'https://discord.gg/mlt',
+              },
+              {
+                name: 'Business Data Management',
+                code: 'BDM',
+                level: 'DIPLOMA',
+                whatsappLink: 'https://chat.whatsapp.com/bdm',
+                discordLink: 'https://discord.gg/bdm',
+              },
+              {
+                name: 'Data Visualization',
+                code: 'DV',
+                level: 'DIPLOMA',
+                whatsappLink: 'https://chat.whatsapp.com/dv',
+                discordLink: 'https://discord.gg/dv',
+              },
+
+              // Degree Level
+              {
+                name: 'Deep Learning',
+                code: 'DL',
+                level: 'DEGREE',
+                whatsappLink: 'https://chat.whatsapp.com/dl',
+                discordLink: 'https://discord.gg/dl',
+              },
+              {
+                name: 'Natural Language Processing',
+                code: 'NLP',
+                level: 'DEGREE',
+                whatsappLink: 'https://chat.whatsapp.com/nlp',
+                discordLink: 'https://discord.gg/nlp',
+              },
+              {
+                name: 'Computer Vision',
+                code: 'CV',
+                level: 'DEGREE',
+                whatsappLink: 'https://chat.whatsapp.com/cv',
+                discordLink: 'https://discord.gg/cv',
+              },
+              {
+                name: 'Reinforcement Learning',
+                code: 'RL',
+                level: 'DEGREE',
+                whatsappLink: 'https://chat.whatsapp.com/rl',
+                discordLink: 'https://discord.gg/rl',
+              },
+            ],
+          },
+        },
+      },
+    },
+  });
+
+  // 2. IIT Bombay
+  const iitb = await prisma.organization.create({
+    data: {
+      name: 'IIT Bombay',
+      code: 'IITB',
+      departments: {
+        create: {
+          name: 'BSc Programming and Data Science',
+          code: 'BSC-PDS',
+          courses: {
+            create: [
+              {
+                name: 'Programming Fundamentals',
+                code: 'PF',
+                level: 'FOUNDATION',
+                whatsappLink: 'https://chat.whatsapp.com/pf',
+                discordLink: 'https://discord.gg/pf',
+              },
+              {
+                name: 'Data Structures',
+                code: 'DS',
+                level: 'FOUNDATION',
+                whatsappLink: 'https://chat.whatsapp.com/ds',
+                discordLink: 'https://discord.gg/ds',
+              },
+              {
+                name: 'Database Systems',
+                code: 'DBS',
+                level: 'DIPLOMA',
+                whatsappLink: 'https://chat.whatsapp.com/dbs',
+                discordLink: 'https://discord.gg/dbs',
+              },
+            ],
+          },
+        },
+      },
+    },
+  });
+
+  // 3. IIT Delhi
+  const iitd = await prisma.organization.create({
+    data: {
+      name: 'IIT Delhi',
+      code: 'IITD',
+      departments: {
+        create: {
+          name: 'BSc Artificial Intelligence',
+          code: 'BSC-AI',
+          courses: {
+            create: [
+              {
+                name: 'AI Fundamentals',
+                code: 'AIF',
+                level: 'FOUNDATION',
+                whatsappLink: 'https://chat.whatsapp.com/aif',
+                discordLink: 'https://discord.gg/aif',
+              },
+              {
+                name: 'Neural Networks',
+                code: 'NN',
+                level: 'DIPLOMA',
+                whatsappLink: 'https://chat.whatsapp.com/nn',
+                discordLink: 'https://discord.gg/nn',
+              },
+              {
+                name: 'AI Ethics',
+                code: 'AIE',
+                level: 'DEGREE',
+                whatsappLink: 'https://chat.whatsapp.com/aie',
+                discordLink: 'https://discord.gg/aie',
+              },
+            ],
+          },
+        },
+      },
+    },
+  });
+
+  // Create some course enrollments for test users
+  console.log('Creating course enrollments...');
+
+  // Create profiles for users first
+  const userProfiles = await Promise.all(
+    users.map(async (user, index) => {
+      return prisma.profile.create({
+        data: {
+          userId: user.id,
+          source: ['Search Engine', 'Friend Referral', 'Social Media'][index % 3],
+          education: index % 2 === 0 ? "Bachelor's Degree" : "Master's Degree",
+          status: index % 2 === 0 ? 'Student' : 'Employed',
+          advancedSkills: ['Python', 'JavaScript', 'Java'].slice(0, 2),
+          intermediateSkills: ['React', 'Node.js', 'PostgreSQL'].slice(0, 2),
+          beginnerSkills: ['Docker', 'AWS', 'Kubernetes'].slice(0, 2),
+          linkedinUrl: `https://linkedin.com/in/${user.name.toLowerCase().replace(' ', '')}`,
+          githubUrl: `https://github.com/${user.name.toLowerCase().replace(' ', '')}`,
+        },
+      });
+    })
+  );
+
+  // Enroll users in various courses
+  const iitmDept = await prisma.department.findFirst({
+    where: { code: 'BSC-DS' },
+    include: { courses: true },
+  });
+
+  const iitbDept = await prisma.department.findFirst({
+    where: { code: 'BSC-PDS' },
+    include: { courses: true },
+  });
+
+  const iitdDept = await prisma.department.findFirst({
+    where: { code: 'BSC-AI' },
+    include: { courses: true },
+  });
+
+  // Enroll users in different departments and courses
+  await Promise.all([
+    // User 1 in IITM
+    prisma.profile.update({
+      where: { id: userProfiles[0].id },
+      data: {
+        organizationId: iitm.id,
+        departmentId: iitmDept?.id,
+        enrollments: {
+          create: iitmDept?.courses.slice(0, 3).map((course: { id: string }) => ({
+            courseId: course.id,
+          })),
+        },
+      },
+    }),
+    // User 2 in IITB
+    prisma.profile.update({
+      where: { id: userProfiles[1].id },
+      data: {
+        organizationId: iitb.id,
+        departmentId: iitbDept?.id,
+        enrollments: {
+          create: iitbDept?.courses.map((course: { id: string }) => ({
+            courseId: course.id,
+          })),
+        },
+      },
+    }),
+    // User 3 in IITD
+    prisma.profile.update({
+      where: { id: userProfiles[2].id },
+      data: {
+        organizationId: iitd.id,
+        departmentId: iitdDept?.id,
+        enrollments: {
+          create: iitdDept?.courses.map((course: { id: string }) => ({
+            courseId: course.id,
+          })),
+        },
+      },
+    }),
+  ]);
+
+  console.log('Database seeded successfully');
 }
 
 main()

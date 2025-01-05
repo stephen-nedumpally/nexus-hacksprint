@@ -16,10 +16,34 @@ export async function GET(request: Request) {
       },
       include: {
         projects: true,
+        organization: true,
+        department: true,
+        enrollments: {
+          include: {
+            course: {
+              include: {
+                _count: {
+                  select: {
+                    enrollments: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
 
-    return NextResponse.json(profile || { userId: session.user.id });
+    // Transform the data to make it easier to work with in the frontend
+    const transformedProfile = profile
+      ? {
+          ...profile,
+          courses: profile.enrollments.map((enrollment) => enrollment.course),
+          enrollments: undefined,
+        }
+      : { userId: session.user.id };
+
+    return NextResponse.json(transformedProfile);
   } catch (error) {
     console.error("Error fetching profile:", error);
     return new NextResponse("Internal Server Error", { status: 500 });

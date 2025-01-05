@@ -34,7 +34,7 @@ export function ProjectForums() {
     <div className="space-y-4">
       {forums.map((forum) => (
         <Link key={forum.id} href={`/forums/projects/${forum.id}`}>
-          <Card className="hover:border-primary transition-colors">
+          <Card className="hover:border-primary mt-2 transition-colors">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-lg font-medium">
                 {forum.name}

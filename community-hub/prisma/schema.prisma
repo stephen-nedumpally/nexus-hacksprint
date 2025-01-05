@@ -197,20 +197,82 @@ model Profile {
   githubUrl         String?
   portfolioUrl      String?
   projects          Project[]
+  organizationId    String?
+  organization      Organization? @relation(fields: [organizationId], references: [id])
+  departmentId      String?
+  department        Department? @relation(fields: [departmentId], references: [id])
+  enrollments       CourseEnrollment[]
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  @@index([userId])
+  @@index([organizationId])
+  @@index([departmentId])
 }
 
 model Project {
+  id        String   @id @default(cuid())
+  name      String
+  url       String
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([profileId])
+}
+
+model Organization {
   id          String   @id @default(cuid())
   name        String
-  url         String
-  profileId   String
-  profile     Profile  @relation(fields: [profileId], references: [id])
+  code        String   @unique // e.g., "IITM"
+  departments Department[]
+  profiles    Profile[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
 
+model Department {
+  id             String   @id @default(cuid())
+  name           String
+  code           String   // e.g., "BSC-DS"
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  courses        Course[]
+  profiles       Profile[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([code, organizationId])
+  @@index([organizationId])
+}
+
+model Course {
+  id           String   @id @default(cuid())
+  name         String
+  code         String?  // Optional course code
+  level        String   // FOUNDATION, DIPLOMA, DEGREE
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+  whatsappLink String?
+  discordLink  String?
+  enrollments  CourseEnrollment[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([code, departmentId])
+  @@index([departmentId])
+}
+
+model CourseEnrollment {
+  id        String   @id @default(cuid())
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id])
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([courseId, profileId])
+  @@index([courseId])
   @@index([profileId])
 }

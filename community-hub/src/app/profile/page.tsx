@@ -38,7 +38,7 @@ async function fetchMyStartup() {
     throw new Error('Failed to fetch startup');
   }
   const data = await res.json();
-  return data;
+  return data.notFound ? null : data;
 }
 
 async function fetchMyApplications() {
@@ -52,22 +52,20 @@ async function fetchMyApplications() {
 
 export default function ProfilePage() {
   const { data: session } = useSession();
-  const { toast } = useToast();
   const router = useRouter();
-  const [selectedPosition, setSelectedPosition] = useState<{
-    id: string;
-    title: string;
-    applications: any[];
-  } | null>(null);
+  const [selectedPosition, setSelectedPosition] = useState<any>(null);
+  const { toast } = useToast();
 
-  const { data: myStartup, isError: startupError } = useQuery<Startup | { notFound: true }>({
-    queryKey: ['my-startup'],
+  const { data: myStartup, error: startupError } = useQuery({
+    queryKey: ['myStartup'],
     queryFn: fetchMyStartup,
+    enabled: !!session?.user,
   });
 
-  const { data: applications, isError: applicationsError } = useQuery<Application[]>({
-    queryKey: ['my-applications'],
+  const { data: applications, error: applicationsError } = useQuery({
+    queryKey: ['myApplications'],
     queryFn: fetchMyApplications,
+    enabled: !!session?.user,
   });
 
   const { data: profile, refetch: refetchProfile } = useQuery({
@@ -79,7 +77,7 @@ export default function ProfilePage() {
     },
   });
 
-  if (!session) {
+  if (!session?.user) {
     return (
       <div className="min-h-screen bg-black py-24">
         <div className="container mx-auto px-4">
@@ -192,7 +190,18 @@ export default function ProfilePage() {
                   </p>
                 </CardContent>
               </Card>
-            ) : myStartup ? (
+            ) : !myStartup ? (
+              <Card>
+                <CardContent className="py-8">
+                  <p className="text-center text-gray-400">
+                    You haven't created a startup yet.{' '}
+                    <Link href="/startups/create" className="text-lime-400 hover:underline">
+                      Create one now
+                    </Link>
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -212,7 +221,7 @@ export default function ProfilePage() {
                   <div>
                     <h3 className="font-medium mb-2">Open Positions</h3>
                     <div className="grid gap-4">
-                      {myStartup.positions.map((position) => (
+                      {myStartup?.positions?.map((position) => (
                         <div key={position.id} className="flex items-center justify-between p-4 rounded-lg border border-white/10">
                           <div>
                             <h4 className="font-medium">{position.title}</h4>
@@ -256,17 +265,6 @@ export default function ProfilePage() {
                       positionTitle={selectedPosition.title}
                     />
                   )}
-                </CardContent>
-              </Card>
-            ) : (
-              <Card>
-                <CardContent className="py-8">
-                  <p className="text-center text-gray-400">
-                    You haven't created a startup yet.{' '}
-                    <Link href="/startups/create" className="text-lime-400 hover:underline">
-                      Create one now
-                    </Link>
-                  </p>
                 </CardContent>
               </Card>
             )}
