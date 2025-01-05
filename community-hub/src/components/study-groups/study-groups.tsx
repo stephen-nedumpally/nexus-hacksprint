@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useState } from "react";
-import { Check, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 
 interface StudyGroup {
   id: string;
@@ -31,64 +32,104 @@ interface StudyGroupCardProps {
 
 function StudyGroupCard({ group }: StudyGroupCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const [showWaitlistDialog, setShowWaitlistDialog] = useState(false);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const router = useRouter();
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setMousePosition({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    });
+  };
 
   const handleJoin = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (group.id === "1") { // Full-Stack Development group
       router.push("/study-groups/full-stack");
+    } else {
+      setShowWaitlistDialog(true);
     }
   };
 
   return (
-    <Card 
-      className="w-[300px] shrink-0 cursor-pointer hover:shadow-lg transition-shadow"
-      onClick={() => setExpanded(!expanded)}
-    >
-      <div className="relative h-40">
-        <img
-          src={group.imageUrl}
-          alt={group.title}
-          className="w-full h-full object-cover rounded-t-lg"
+    <>
+      <Card 
+        className="w-[300px] shrink-0 cursor-pointer hover:shadow-lg transition-shadow relative overflow-hidden"
+        onClick={() => setExpanded(!expanded)}
+        onMouseMove={handleMouseMove}
+      >
+        <motion.div
+          className="absolute inset-0 pointer-events-none z-10"
+          animate={{
+            background: `radial-gradient(400px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(253, 185, 0, 0.25), transparent 40%)`
+          }}
         />
-        {group.organization.verified && (
-          <Badge className="absolute top-2 right-2 bg-blue-500">Verified</Badge>
-        )}
-      </div>
-      <CardHeader>
-        <CardTitle className="text-lg">{group.title}</CardTitle>
-        <CardDescription>{group.organization.name}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span>Members</span>
-            <span>{group.members.current}/{group.members.total}</span>
+        <motion.div
+          className="absolute inset-0 pointer-events-none z-10"
+          animate={{
+            border: `1px solid rgba(253, 185, 0, ${mousePosition.x > 0 ? 0.15 : 0})`
+          }}
+        />
+        <div className="relative z-20">
+          <div className="relative h-40">
+            <img
+              src={group.imageUrl}
+              alt={group.title}
+              className="w-full h-full object-cover rounded-t-lg"
+            />
+            {group.organization.verified && (
+              <Badge className="absolute top-2 right-2 bg-blue-500">Verified</Badge>
+            )}
           </div>
-          <div className="text-sm text-muted-foreground">
-            Next Session: {group.nextSession}
-          </div>
-          {expanded && (
-            <div className="space-y-4 mt-4 pt-4 border-t">
-              <p className="text-sm line-clamp-3">{group.description}</p>
-              <div className="flex flex-wrap gap-2">
-                {group.levels.map((level) => (
-                  <Badge key={level} variant="outline">
-                    {level}
-                  </Badge>
-                ))}
+          <CardHeader>
+            <CardTitle className="text-lg">{group.title}</CardTitle>
+            <CardDescription>{group.organization.name}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Members</span>
+                <span>{group.members.current}/{group.members.total}</span>
               </div>
-              <div className="flex gap-2">
-                <Button className="flex-1" onClick={handleJoin}>Join Group</Button>
-                <Button variant="outline" size="icon" onClick={(e) => e.stopPropagation()}>
-                  <X className="h-4 w-4" />
-                </Button>
+              <div className="text-sm text-muted-foreground">
+                Next Session: {group.nextSession}
               </div>
+              {expanded && (
+                <div className="space-y-4 mt-4 pt-4 border-t">
+                  <p className="text-sm line-clamp-3">{group.description}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {group.levels.map((level) => (
+                      <Badge key={level} variant="outline">
+                        {level}
+                      </Badge>
+                    ))}
+                  </div>
+                  <Button 
+                    className="w-full" 
+                    onClick={handleJoin}
+                  >
+                    {group.id === "1" ? "View Group" : "Join Waitlist"}
+                  </Button>
+                </div>
+              )}
             </div>
-          )}
+          </CardContent>
         </div>
-      </CardContent>
-    </Card>
+      </Card>
+
+      <Dialog open={showWaitlistDialog} onOpenChange={setShowWaitlistDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Added to Waitlist!</DialogTitle>
+            <DialogDescription>
+              You've been added to the waitlist for {group.title}. We'll notify you when a spot becomes available.
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

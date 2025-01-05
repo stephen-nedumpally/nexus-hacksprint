@@ -1,5 +1,10 @@
 'use client';
 
+import { useState } from 'react';
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "@/components/ui/use-toast";
+import { Link2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -34,7 +39,7 @@ const updates: Update[] = [
     id: 2,
     type: "milestone",
     title: "Group Milestone Achieved",
-    description: "Our group completed 100+ practice problems this month! 🎉",
+    description: "Our group completed 100+ practice problems this month! ",
     date: "1 day ago"
   },
   {
@@ -97,7 +102,7 @@ const typeIcons = {
 
 export function Updates() {
   return (
-    <Card className="bg-gray-900 border-gray-800">
+    <Card className="bg-[#0F1218] border border-gray-800">
       <CardHeader>
         <CardTitle className="text-white flex items-center">
           <Bell className="h-5 w-5 mr-2" />
@@ -105,12 +110,12 @@ export function Updates() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-[400px] pr-4">
+        <ScrollArea className=" pr-4">
           <div className="space-y-4">
             {updates.map((update) => (
               <div
                 key={update.id}
-                className="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors"
+                className="p-4 bg-[#0F1218] rounded-lg rounded-2xl border border-gray-800 hover:bg-gray-900 transition-colors"
               >
                 <div className="flex justify-between items-start mb-2">
                   <Badge
@@ -138,6 +143,17 @@ export function Updates() {
 }
 
 export function Resources() {
+  const [showCopiedModal, setShowCopiedModal] = useState(false);
+
+  const handleCopyLink = (link: string) => {
+    navigator.clipboard.writeText(link);
+    setShowCopiedModal(true);
+    toast({
+      title: "Link copied!",
+      description: "Resource link has been copied to clipboard",
+    });
+  };
+
   return (
     <Card className=" border-gray-800">
       <CardHeader>
@@ -152,7 +168,7 @@ export function Resources() {
             {resources.map((resource) => (
               <div
                 key={resource.id}
-                className="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors"
+                className="p-4 bg-[#0F1218] rounded-lg rounded-2xl border border-gray-800 hover:bg-gray-900 transition-colors"
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center space-x-2">
@@ -163,7 +179,14 @@ export function Resources() {
                       {resource.type}
                     </Badge>
                   </div>
-                  <Link className="h-4 w-4 text-blue-400" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="ml-4 text-gray-400 hover:text-white hover:bg-[#1F2937]"
+                    onClick={() => handleCopyLink(resource.link)}
+                  >
+                    <Link2 className="h-4 w-4" />
+                  </Button>
                 </div>
                 <h3 className="font-medium text-white mb-1">{resource.title}</h3>
                 <p className="text-sm text-gray-400 mb-2">{resource.description}</p>
@@ -172,6 +195,16 @@ export function Resources() {
             ))}
           </div>
         </ScrollArea>
+        <Dialog open={showCopiedModal} onOpenChange={setShowCopiedModal}>
+          <DialogContent className="bg-[#0F1218] border border-[#1F2937] text-white">
+            <DialogHeader>
+              <DialogTitle>Resource Link Copied</DialogTitle>
+            </DialogHeader>
+            <p className="text-gray-400">
+              The resource link has been copied to your clipboard.
+            </p>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );

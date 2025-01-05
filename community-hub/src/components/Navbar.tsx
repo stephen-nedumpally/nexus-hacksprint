@@ -51,6 +51,9 @@ export function Navbar() {
           <Link href="/study-groups" className="text-sm text-zinc-400 transition hover:text-white">
             Study Groups
           </Link>
+          <Link href="/coursework" className="text-sm text-zinc-400 transition hover:text-white">
+            Coursework Updates
+          </Link>
           <Link href="/forums" className="text-sm text-zinc-400 transition hover:text-white">
             Forums
           </Link>
@@ -128,6 +131,12 @@ export function Navbar() {
             className="block rounded-lg px-3 py-2 text-base text-zinc-400 hover:bg-white/10 hover:text-white"
           >
             Study Groups
+          </Link>
+          <Link
+            href="/coursework"
+            className="block rounded-lg px-3 py-2 text-base text-zinc-400 hover:bg-white/10 hover:text-white"
+          >
+            Coursework Updates
           </Link>
           <Link
             href="/forums"
