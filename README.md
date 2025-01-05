@@ -34,8 +34,8 @@
 ## 🛠️ Tech Stack  
 
 - **Frontend:** Next.js, React  
-- **Backend:** Node.js, Express, and integrated Next.js API routes  
-- **Database:** MongoDB or PostgreSQL (customizable based on project needs)  
+- **Backend:** Integrated Next.js API routes  
+- **Database:** PostgreSQL 
 - **Styling:** Tailwind CSS  
 - **Deployment:** Vercel  
 
@@ -47,5 +47,5 @@ Follow the steps below to set up the project locally:
 
 1. **Clone the Repository**  
    ```bash
-   git clone https://github.com/yourusername/rise.git
-   cd rise
+   git clone 
+
