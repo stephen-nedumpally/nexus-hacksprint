@@ -1,5 +1,5 @@
 # Rise  
-
+Presentation Link:https://www.youtube.com/watch?v=ZzK1jQ3hWJQ
 **Rise** is a Next.js fullstack application designed to centralize coursework management and provide students with access to startup opportunities and referral resources. It serves as a unified platform to streamline academic tasks, enhance resource organization, and foster career growth for students.  
 
 ---
